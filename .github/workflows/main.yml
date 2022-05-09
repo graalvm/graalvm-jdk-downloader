@@ -35,3 +35,5 @@ jobs:
           $GRAALVM_HOME/bin/gu --version
           native-image --version
           java --version
+      - name: Re-run 'get' script
+        run: ./get ${{ matrix.version }}
