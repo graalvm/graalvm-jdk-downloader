@@ -114,6 +114,10 @@ echo "About to request a download token for GraalVM Enterprise Edition..."
 echo "Please provide an email address and review Oracle's Privacy Policy at https://www.oracle.com/legal/privacy/privacy-policy.html."
 read -r -p "Enter a valid email address: " email
 
+if [[ "${email}" != *"@"* ]]; then
+    fail "'${email}' is not a valid email address"
+fi
+
 response=$(curl -sS -X POST "${GDS_BASE}/licenseAcceptance" --user-agent "${GVMD_USER_AGENT}" -H "Content-Type: application/json" \
     -d "{  \"email\": \"${email}\", \"licenseId\": \"${LICENSE_ID}\",  \"type\": \"GENERATE_TOKEN_AND_ACCEPT_LICENSE\"}")
 token=$(echo "${response}" | grep -o '"token":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find token (${response})."
