@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+#
+# The Universal Permissive License (UPL), Version 1.0
+#
+# Subject to the condition set forth below, permission is hereby granted to any
+# person obtaining a copy of this software, associated documentation and/or
+# data (collectively the "Software"), free of charge and under any and all
+# copyright rights in the Software, and any and all patent rights owned or
+# freely licensable by each licensor hereunder covering either (i) the
+# unmodified Software as contributed to or provided by such licensor, or (ii)
+# the Larger Works (as defined below), to deal in both
+#
+# (a) the Software, and
+#
+# (b) any piece of software and/or hardware listed in the lrgrwrks.txt file if
+# one is included with the Software each a "Larger Work" to which the Software
+# is contributed by such licensors),
+#
+# without restriction, including without limitation the rights to copy, create
+# derivative works of, display, perform, and distribute the Software and make,
+# use, sell, offer for sale, import, export, have made, and have sold the
+# Software and the Larger Work(s), and to sublicense the foregoing rights on
+# either these or other terms.
+#
+# This license is subject to the following condition:
+#
+# The above copyright notice and either this complete permission notice or at a
+# minimum a reference to the UPL must be included in all copies or substantial
+# portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+set -o errexit # fail on error
+set -o nounset # fail if a variable is undefined
+
+#############
+# Debugging #
+#############
+
+function is_debug() {
+    [[ -n "${GVMD_DEBUG:-}" ]]
+}
+
+is_debug && set -x
+
+function fail() {
+    echo "$1"
+    exit 1
+}
+
+################
+# Housekeeping #
+################
+
+function ensure_command() {
+    local cmd=$1
+    is_debug && echo "Looking for ${cmd}..."
+    if ! command -v "${cmd}" > /dev/null; then
+        echo "Not found."
+        echo ""
+        echo "======================================================================================================"
+        echo " Please install ${cmd} on your system using your favourite package manager."
+        echo ""
+        echo " Restart after installing ${cmd}."
+        echo "======================================================================================================"
+        fail ""
+    fi
+}
+
+ensure_command "curl"
+
+readonly GDS_BASE="https://gds.oracle.com/api/20220101"
+readonly LICENSE_ID="D53FA58D12817B3CE0530F15000A74CA"
+readonly GU_CONFIG="${HOME}/.gu/config"
+readonly GVMD_USER_AGENT="GraalVM Downloader/0.0.1 (arch:$(uname -m); os:$(uname -s)"
+
+#########################
+# Detect existing token #
+#########################
+
+if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
+    if [[ -f "${GU_CONFIG}" ]]; then
+        # shellcheck source=/dev/null
+        source "${GU_CONFIG}"
+        if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
+            fail "Unable to detect \$GRAAL_EE_DOWNLOAD_TOKEN in ${GU_CONFIG}"
+        else
+            echo "Download token already persisted in ${GU_CONFIG}:"
+            echo "Your download token is: '${GRAAL_EE_DOWNLOAD_TOKEN}'"
+            exit
+        fi
+    fi
+else
+    echo "Download token already set via \$GRAAL_EE_DOWNLOAD_TOKEN:"
+    echo "Your download token is: '${GRAAL_EE_DOWNLOAD_TOKEN}'"
+    exit
+fi
+
+#####################
+# Request new token #
+#####################
+
+echo "About to request a download token for GraalVM Enterprise Edition..."
+echo "Please provide an email address and review Oracle's Privacy Policy at https://www.oracle.com/legal/privacy/privacy-policy.html."
+read -r -p "Enter a valid email address: " email
+
+response=$(curl -sS -X POST "${GDS_BASE}/licenseAcceptance" --user-agent "${GVMD_USER_AGENT}" -H "Content-Type: application/json" \
+    -d "{  \"email\": \"${email}\", \"licenseId\": \"${LICENSE_ID}\",  \"type\": \"GENERATE_TOKEN_AND_ACCEPT_LICENSE\"}")
+token=$(echo "${response}" | grep -o '"token":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find token (${response})."
+
+echo "Your new download token is: '${token}'"
+echo "Please check your email inbox and accept the license to activate your download token."
+
+#####################
+# Persist new token #
+#####################
+
+read -r -p "Would you like to persist this token at ${HOME}/.gu/config on this machine? (y/N): " user_input
+
+if [[ "${user_input}" == [yY] ]]; then
+    echo "#$(date)" > "${HOME}/.gu/config"
+    echo "GRAAL_EE_DOWNLOAD_TOKEN=${token}" >> "${HOME}/.gu/config"
+    echo "Download token persisted."
+else
+    echo "Download token not persisted."
+fi

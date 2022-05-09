@@ -19,8 +19,8 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
-      - name: Check 'get' script
-        run: shellcheck get
+      - name: Check 'get' and 'get-ee-token' scripts
+        run: shellcheck get get-ee-token
         if: matrix.os == 'ubuntu-latest'
       - name: Run 'get' script
         run: ./get ${{ matrix.version }}
