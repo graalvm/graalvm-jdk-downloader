@@ -21,6 +21,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Check 'get' script
         run: shellcheck get
+        if: matrix.os == 'ubuntu-latest'
       - name: Run 'get' script
         run: ./get ${{ matrix.version }}
         env:
