@@ -146,6 +146,21 @@ ensure_command "tar"
 ensure_command "curl"
 ensure_command "shasum"
 
+readonly GVMD_USER_AGENT="GraalVM Downloader/0.0.1 (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
+
+curl_args=("--show-error" "--location" "--user-agent" "${GVMD_USER_AGENT}")
+gu_args=()
+
+# Silence curl and gu when $CI is set
+if [[ "${CI}" == "true" ]]; then
+    curl_args+=("--silent")
+    gu_args+=("--no-progress")
+fi
+
+####################
+# Set up directory #
+####################
+
 if [[ -z "${GVMD_DIR:-}" ]]; then
     GVMD_DIR="${HOME}/.graalvm"
 fi
@@ -156,7 +171,6 @@ if [[ ! -d "$GVMD_DIR" ]]; then
 fi
 
 readonly GRAALVM_HOME="${GVMD_DIR}/${GRAALVM_NAME}${GRAALVM_HOME_SUFFIX}"
-readonly GVMD_USER_AGENT="GraalVM Downloader/0.0.1 (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
 
 if [[ -d "${GRAALVM_HOME}" ]]; then
     echo "${GRAALVM_NAME} is already available on your machine!"
@@ -180,10 +194,10 @@ case "${GRAALVM_EDITION}" in
 
         echo "Downloading ${GRAALVM_DL_FILE}..."
         dl_url="${GRAALVM_CE_BASE}/vm-${GRAALVM_VERSION}/${GRAALVM_IDENTIFIER}.tar.gz"
-        curl --show-error --location --user-agent "${GVMD_USER_AGENT}" -o "${GRAALVM_DL_FILE}" "${dl_url}"
+        curl "${curl_args[@]}" -o "${GRAALVM_DL_FILE}" "${dl_url}"
 
         checksum_file="${GRAALVM_DL_FILE}.sha256"
-        curl --silent --show-error --location --user-agent "${GVMD_USER_AGENT}" -o "${checksum_file}" "${dl_url}.sha256"
+        curl "${curl_args[@]}" --silent -o "${checksum_file}" "${dl_url}.sha256"
         readonly GRAALVM_DL_FILE_CHECKSUM="$(cat "${checksum_file}")"
         rm "${checksum_file}"
         ;;
@@ -214,14 +228,12 @@ case "${GRAALVM_EDITION}" in
         filters="${filters}&metadata=os:${gds_os}&metadata=arch:${GRAALVM_ARCH}"
 
         echo "Fetching artifact metadata for ${GRAALVM_IDENTIFIER}..."
-        artifacts_response=$(curl --user-agent "${GVMD_USER_AGENT}" --silent -X GET "${GDS_BASE}/artifacts?${filters}")
+        artifacts_response=$(curl "${curl_args[@]}" -X GET "${GDS_BASE}/artifacts?${filters}")
         artifact_id=$(echo "$artifacts_response" | grep -o '"id":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact id."
         readonly GRAALVM_DL_FILE_CHECKSUM=$(echo "$artifacts_response" | grep -o '"checksum":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact checksum."
 
         echo "Downloading ${GRAALVM_DL_FILE}..."
-        curl --show-error --location \
-             --user-agent "${GVMD_USER_AGENT}" \
-             -H "x-download-token: ${GRAAL_EE_DOWNLOAD_TOKEN}" \
+        curl "${curl_args[@]}" -H "x-download-token: ${GRAAL_EE_DOWNLOAD_TOKEN}" \
              -o "${GRAALVM_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content"
 
         # Check file size to verify that the download succeeded. Otherwise, print an error message.
@@ -272,7 +284,7 @@ popd > /dev/null
 ####################################
 
 echo "Installing GraalVM Native Image..."
-"${GRAALVM_HOME}/bin/gu" install native-image
+"${GRAALVM_HOME}/bin/gu" install "${gu_args[@]}" native-image
 
 ############
 # Teardown #
