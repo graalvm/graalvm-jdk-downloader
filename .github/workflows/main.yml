@@ -29,9 +29,9 @@ jobs:
       - name: Check environment
         run: |
           path_suffix="" && [[ "$(uname -s)" != "Darwin" ]] || path_suffix="/Contents/Home"
-          export GRAALVM_HOME="$HOME/.graalvm/${{ matrix.version }}"
+          export GRAALVM_HOME="$HOME/.graalvm/${{ matrix.version }}${path_suffix}"
           export PATH="$HOME/.graalvm/${{ matrix.version }}${path_suffix}/bin:$PATH"
-          export JAVA_HOME="$HOME/.graalvm/${{ matrix.version }}"
+          export JAVA_HOME="$HOME/.graalvm/${{ matrix.version }}${path_suffix}"
           $GRAALVM_HOME/bin/gu --version
           native-image --version
           java --version
