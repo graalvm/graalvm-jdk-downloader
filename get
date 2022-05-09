@@ -224,8 +224,17 @@ case "${GRAALVM_EDITION}" in
              -H "x-download-token: ${GRAAL_EE_DOWNLOAD_TOKEN}" \
              -o "${GRAALVM_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content"
 
-        # Check file size to verify that the download succeed. Otherwise, print an error message.
-        file_size=$(stat --printf="%s" "${GRAALVM_DL_FILE}")
+        # Check file size to verify that the download succeeded. Otherwise, print an error message.
+        case "${GRAALVM_OS}" in
+            "linux")
+                file_size=$(stat -c%s "${GRAALVM_DL_FILE}")
+                ;;
+            "darwin")
+                file_size=$(stat -f%z "${GRAALVM_DL_FILE}")
+                ;;
+            *)
+                fail "Unsupported OS: $(uname -s)"
+        esac
         if [[ "${file_size}" -lt 2048 ]]; then
             grep -o '"message":"[^"]*' "${GRAALVM_DL_FILE}" | grep -o '[^"]*$'
             fail "Download failed."
