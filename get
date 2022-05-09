@@ -1,0 +1,276 @@
+#!/usr/bin/env bash
+#
+# Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+# DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+#
+# The Universal Permissive License (UPL), Version 1.0
+#
+# Subject to the condition set forth below, permission is hereby granted to any
+# person obtaining a copy of this software, associated documentation and/or
+# data (collectively the "Software"), free of charge and under any and all
+# copyright rights in the Software, and any and all patent rights owned or
+# freely licensable by each licensor hereunder covering either (i) the
+# unmodified Software as contributed to or provided by such licensor, or (ii)
+# the Larger Works (as defined below), to deal in both
+#
+# (a) the Software, and
+#
+# (b) any piece of software and/or hardware listed in the lrgrwrks.txt file if
+# one is included with the Software each a "Larger Work" to which the Software
+# is contributed by such licensors),
+#
+# without restriction, including without limitation the rights to copy, create
+# derivative works of, display, perform, and distribute the Software and make,
+# use, sell, offer for sale, import, export, have made, and have sold the
+# Software and the Larger Work(s), and to sublicense the foregoing rights on
+# either these or other terms.
+#
+# This license is subject to the following condition:
+#
+# The above copyright notice and either this complete permission notice or at a
+# minimum a reference to the UPL must be included in all copies or substantial
+# portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+set -o errexit # fail on error
+set -o nounset # fail if a variable is undefined
+
+#############
+# Debugging #
+#############
+
+function is_debug() {
+    [[ -n "${GVMD_DEBUG:-}" ]]
+}
+
+is_debug && set -x
+
+function fail() {
+    echo "$1"
+    exit 1
+}
+
+############################
+# Check and parse argument #
+############################
+
+if [[ $# -ne 1 ]]; then
+    fail "GraalVM Downloader requires one argument (e.g., 'graalvm-ce-java11-22.1.0')"
+fi
+
+if [[ "$1" != "graalvm-"* ]]; then
+    fail "Arguments needs to be a GraalVM identifier (e.g., 'graalvm-ce-java11-22.1.0')"
+fi
+
+parts="${1#*-}"
+readonly GRAALVM_EDITION="${parts%%-*}"
+case "${GRAALVM_EDITION}" in
+    "ce"|"ee") ;;
+    *)
+        fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')"
+esac
+
+parts="${parts#*-}"
+readonly JAVA_VERSION="${parts%%-*}"
+case "${JAVA_VERSION}" in
+    "java11"|"java17") ;;
+    *)
+        fail "Unsupported Java version: ${JAVA_VERSION} (use 'java11' or 'java17')"
+esac
+
+case "$(uname -s)" in
+    "Linux")
+        GRAALVM_OS="linux"
+        GRAALVM_HOME_SUFFIX=""
+        ;;
+    "Darwin")
+        GRAALVM_OS="darwin"
+        GRAALVM_HOME_SUFFIX="/Contents/Home"
+        ;;
+    *)
+        fail "Unsupported OS: $(uname -s)"
+esac
+readonly GRAALVM_OS GRAALVM_HOME_SUFFIX
+
+case "$(uname -m)" in
+    "x86_64")
+        GRAALVM_ARCH="amd64"
+        ;;
+    "aarch64"|"arm64")
+        GRAALVM_ARCH="aarch64"
+        ;;
+    *)
+        fail "Unsupported architecture: $(uname -m)"
+esac
+readonly GRAALVM_ARCH
+
+parts="${parts#*-}"
+readonly GRAALVM_VERSION="${parts%%-*}"
+
+if [[ ! "${GRAALVM_VERSION}" =~ ^[0-9\.]*$ ]]; then
+    fail "Invalid GraalVM version: ${GRAALVM_VERSION}"
+fi
+
+readonly GRAALVM_IDENTIFIER="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_OS}-${GRAALVM_ARCH}-${GRAALVM_VERSION}"
+readonly GRAALVM_NAME="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_VERSION}"
+readonly GRAALVM_DL_FILE="${GRAALVM_IDENTIFIER}.tar.gz"
+
+################
+# Housekeeping #
+################
+
+function ensure_command() {
+    local cmd=$1
+    is_debug && echo "Looking for ${cmd}..."
+    if ! command -v "${cmd}" > /dev/null; then
+        echo "Not found."
+        echo ""
+        echo "======================================================================================================"
+        echo " Please install ${cmd} on your system using your favourite package manager."
+        echo ""
+        echo " Restart after installing ${cmd}."
+        echo "======================================================================================================"
+        fail ""
+    fi
+}
+
+ensure_command "tar"
+ensure_command "curl"
+ensure_command "shasum"
+
+if [[ -z "${GVMD_DIR:-}" ]]; then
+    GVMD_DIR="${HOME}/.graalvm"
+fi
+readonly GVMD_DIR
+
+if [[ ! -d "$GVMD_DIR" ]]; then
+    mkdir "${GVMD_DIR}"
+fi
+
+readonly GRAALVM_HOME="${GVMD_DIR}/${GRAALVM_NAME}${GRAALVM_HOME_SUFFIX}"
+readonly GVMD_USER_AGENT="GraalVM Downloader/0.0.1 (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
+
+if [[ -d "${GRAALVM_HOME}" ]]; then
+    echo "${GRAALVM_NAME} is already available on your machine!"
+    echo ""
+    echo "Use the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:"
+    echo "export GRAALVM_HOME=\"${GRAALVM_HOME}\""
+    echo "export PATH=\"${GRAALVM_HOME}/bin:\$PATH\""
+    echo "export JAVA_HOME=\"${GRAALVM_HOME}\""
+    exit
+fi
+
+pushd "${GVMD_DIR}" > /dev/null
+
+############
+# Download #
+############
+
+case "${GRAALVM_EDITION}" in
+    "ce")
+        readonly GRAALVM_CE_BASE="https://github.com/graalvm/graalvm-ce-builds/releases/download"
+
+        echo "Downloading ${GRAALVM_DL_FILE}..."
+        dl_url="${GRAALVM_CE_BASE}/vm-${GRAALVM_VERSION}/${GRAALVM_IDENTIFIER}.tar.gz"
+        curl --show-error --location --user-agent "${GVMD_USER_AGENT}" -o "${GRAALVM_DL_FILE}" "${dl_url}"
+
+        checksum_file="${GRAALVM_DL_FILE}.sha256"
+        curl --silent --show-error --location --user-agent "${GVMD_USER_AGENT}" -o "${checksum_file}" "${dl_url}.sha256"
+        readonly GRAALVM_DL_FILE_CHECKSUM="$(cat ${checksum_file})"
+        rm "${checksum_file}"
+        ;;
+    "ee")
+        readonly GDS_BASE="https://gds.oracle.com/api/20220101"
+        readonly PRODUCT_ID="D53FAE8052773FFAE0530F15000AA6C6"
+        readonly GU_CONFIG="${HOME}/.gu/config"
+
+        if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
+            if [[ -f "${GU_CONFIG}" ]]; then
+                source "${GU_CONFIG}"
+                if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
+                    fail "Unable to detect \$GRAAL_EE_DOWNLOAD_TOKEN in ${GU_CONFIG}"
+                fi
+            else
+                fail "Unable to find a download token. Please provide it via \$GRAAL_EE_DOWNLOAD_TOKEN or use the GraalVM Updater to persist it to disk."
+            fi
+        fi
+
+        filters="productId=${PRODUCT_ID}&metadata=version:${GRAALVM_VERSION}&metadata=isBase:True&status=PUBLISHED&responseFields=id&responseFields=checksum&responseFields=displayName"
+        gds_java="${JAVA_VERSION#java}"
+        filters="${filters}&metadata=java:jdk${gds_java}"
+        gds_os="${GRAALVM_OS}"
+        if [[ "$gds_os" == "darwin" ]]; then
+            gds_os="macos" # GDS uses 'macos' instead of 'darwin'
+        fi
+        filters="${filters}&metadata=os:${gds_os}&metadata=arch:${GRAALVM_ARCH}"
+
+        echo "Fetching artifact metadata for ${GRAALVM_IDENTIFIER}..."
+        artifacts_response=$(curl --user-agent "${GVMD_USER_AGENT}" --silent -X GET "${GDS_BASE}/artifacts?${filters}")
+        artifact_id=$(echo "$artifacts_response" | grep -o '"id":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact id."
+        readonly GRAALVM_DL_FILE_CHECKSUM=$(echo "$artifacts_response" | grep -o '"checksum":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact checksum."
+
+        echo "Downloading ${GRAALVM_DL_FILE}..."
+        curl --show-error --location \
+             --user-agent "${GVMD_USER_AGENT}" \
+             -H "x-download-token: ${GRAAL_EE_DOWNLOAD_TOKEN}" \
+             -o "${GRAALVM_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content"
+
+        # Check file size to verify that the download succeed. Otherwise, print an error message.
+        file_size=$(stat --printf="%s" "${GRAALVM_DL_FILE}")
+        if [[ "${file_size}" -lt 2048 ]]; then
+            grep -o '"message":"[^"]*' "${GRAALVM_DL_FILE}" | grep -o '[^"]*$'
+            fail "Download failed."
+        fi
+        ;;
+    *)
+        fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')"
+esac
+
+###########
+# Verify #
+###########
+
+echo "Verifying checksum..."
+if ! echo "${GRAALVM_DL_FILE_CHECKSUM}  ${GRAALVM_DL_FILE}" | shasum --algorithm 256 --check --status -; then
+    fail "Failed to verify checksum. Please file an issue at https://github.com/oracle/graal/issues."
+fi
+
+###########
+# Extract #
+###########
+
+echo "Extracting..."
+tar xzf "${GRAALVM_DL_FILE}"
+rm "${GRAALVM_DL_FILE}"
+
+if [[ ! -d "${GRAALVM_HOME}" ]]; then
+    fail "Failed to find GraalVM installation. Please file an issue at https://github.com/oracle/graal/issues."
+fi
+
+popd > /dev/null
+
+####################################
+# Pre-install GraalVM Native Image #
+####################################
+
+echo "Installing GraalVM Native Image..."
+"${GRAALVM_HOME}/bin/gu" install native-image
+
+############
+# Teardown #
+############
+
+echo "${GRAALVM_NAME} has been downloaded successfully!"
+echo ""
+echo "Use the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:"
+echo "export GRAALVM_HOME=\"${GRAALVM_HOME}\""
+echo "export PATH=\"${GRAALVM_HOME}/bin:\$PATH\""
+echo "export JAVA_HOME=\"${GRAALVM_HOME}\""
