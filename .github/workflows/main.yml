@@ -1,0 +1,36 @@
+name: 'GraalVM Downloader Tests'
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        version: [graalvm-ce-java11-22.1.0, graalvm-ee-java17-22.1.0]
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check 'get' script
+        run: shellcheck get
+      - name: Run 'get' script
+        run: ./get ${{ matrix.version }}
+        env:
+          GRAAL_EE_DOWNLOAD_TOKEN: ${{ secrets.GRAAL_EE_DOWNLOAD_TOKEN }}
+      - name: Check environment
+        run: |
+          path_suffix="" && [[ "$(uname -s)" != "Darwin" ]] || path_suffix="/Contents/Home"
+          export GRAALVM_HOME="$HOME/.graalvm/${{ matrix.version }}"
+          export PATH="$HOME/.graalvm/${{ matrix.version }}${path_suffix}/bin:$PATH"
+          export JAVA_HOME="$HOME/.graalvm/${{ matrix.version }}"
+          $GRAALVM_HOME/bin/gu --version
+          native-image --version
+          java --version
