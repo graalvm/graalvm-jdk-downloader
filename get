@@ -184,7 +184,7 @@ case "${GRAALVM_EDITION}" in
 
         checksum_file="${GRAALVM_DL_FILE}.sha256"
         curl --silent --show-error --location --user-agent "${GVMD_USER_AGENT}" -o "${checksum_file}" "${dl_url}.sha256"
-        readonly GRAALVM_DL_FILE_CHECKSUM="$(cat ${checksum_file})"
+        readonly GRAALVM_DL_FILE_CHECKSUM="$(cat "${checksum_file}")"
         rm "${checksum_file}"
         ;;
     "ee")
@@ -194,6 +194,7 @@ case "${GRAALVM_EDITION}" in
 
         if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
             if [[ -f "${GU_CONFIG}" ]]; then
+                # shellcheck source=/dev/null
                 source "${GU_CONFIG}"
                 if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
                     fail "Unable to detect \$GRAAL_EE_DOWNLOAD_TOKEN in ${GU_CONFIG}"
