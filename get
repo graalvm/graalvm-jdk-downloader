@@ -152,7 +152,7 @@ curl_args=("--show-error" "--location" "--user-agent" "${GVMD_USER_AGENT}")
 gu_args=()
 
 # Silence curl and gu when $CI is set
-if [[ "${CI}" == "true" ]]; then
+if [[ "${CI:-}" == "true" ]]; then
     curl_args+=("--silent")
     gu_args+=("--no-progress")
 fi
