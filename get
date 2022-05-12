@@ -107,7 +107,7 @@ while [[ $# -gt 0 ]]; do
         exit 0
         ;;
     -l | --list)
-        ls -l "${GVMD_DIR}" || echo "No GraalVM installations found."
+        ls -d1 "${GVMD_DIR}"/* || echo "No GraalVM installations found."
         exit 0
         ;;
     --no-progress)
