@@ -84,12 +84,16 @@ opt_graalvm_identifier=""
 opt_no_progress="${CI:-false}"
 opt_positional=()
 
-while [[ $# -gt 0 ]]
-do
-case "$1" in
+if [[ $# -eq 0 ]]; then
+    print_help
+    exit 0
+fi
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
     -c | --components)
         opt_components="${2:-}"
-        if [[ "${opt_components}" == *" "* ]]; then
+        if [[ -z "${opt_components}" || "${opt_components}" == *" "* ]]; then
             fail "--components arguments must be a comma-separated list of GraalVM components and should not contain a space, got: '${opt_components}'."
         fi
         shift 2
@@ -233,7 +237,7 @@ if [[ -d "${GRAALVM_HOME}" ]]; then
     echo "export GRAALVM_HOME=\"${GRAALVM_HOME}\""
     echo "export PATH=\"${GRAALVM_HOME}/bin:\$PATH\""
     echo "export JAVA_HOME=\"${GRAALVM_HOME}\""
-    exit
+    exit 0
 fi
 
 pushd "${GVMD_DIR}" > /dev/null
