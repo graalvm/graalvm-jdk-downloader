@@ -43,45 +43,94 @@
 set -o errexit # fail on error
 set -o nounset # fail if a variable is undefined
 
-#############
-# Debugging #
-#############
-
-function is_debug() {
-    [[ -n "${GVMD_DEBUG:-}" ]]
-}
-
-is_debug && set -x
+###########
+# Helpers #
+###########
 
 function fail() {
     echo "$1"
     exit 1
 }
 
-############################
-# Check and parse argument #
-############################
+function print_help() {
+  cat <<EOF
+GraalVM Downloader
 
-if [[ $# -ne 1 ]]; then
-    fail "GraalVM Downloader requires one argument (e.g., 'graalvm-ce-java11-22.1.0')"
+Usage:
+    bash <(curl -sL https://graalvm.org/get) [options] graalvm-ce-java11-22.1.0
+
+Options:
+    -c | --components   Comma-separated list of GraalVM components (e.g., '-c native-image,nodejs')
+    -d | --debug        Enable debug mode.
+    -h | --help         Show this help text.
+    --no-progress       Disable progress printing.
+
+See https://www.graalvm.org/ for more information.
+EOF
+}
+
+#############################
+# Check and parse arguments #
+#############################
+
+opt_components=""
+opt_graalvm_identifier=""
+opt_no_progress="${CI:-false}"
+opt_positional=()
+
+while [[ $# -gt 0 ]]
+do
+case "$1" in
+    -c | --components)
+        opt_components="${2:-}"
+        if [[ "${opt_components}" == *" "* ]]; then
+            fail "--components arguments must be a comma-separated list of GraalVM components and should not contain a space, got: '${opt_components}'."
+        fi
+        shift 2
+        ;;
+    -d | --debug)
+        set -x
+        shift
+        ;;
+    -h | --help)
+        print_help
+        exit 0
+        ;;
+    --no-progress)
+        opt_no_progress="true"
+        shift
+        ;;
+    -*)
+        fail "Unknown option: $1"
+        ;;
+    *)
+        opt_positional+=("$1")
+        shift
+        ;;
+    esac
+done
+
+if [[ "${#opt_positional[@]}" -ne 1 || "${opt_positional[0]}" != "graalvm-"* ]]; then
+    fail "A GraalVM identifier (e.g., 'graalvm-ce-java11-22.1.0') needs to be the only position argument, got ${#opt_positional[@]}: '${opt_positional[*]:-}'."
+else
+    opt_graalvm_identifier="${opt_positional[0]}"
 fi
 
-if [[ "$1" != "graalvm-"* ]]; then
-    fail "Arguments needs to be a GraalVM identifier (e.g., 'graalvm-ce-java11-22.1.0')"
-fi
-
-parts="${1#*-}"
+parts="${opt_graalvm_identifier#*-}"
 readonly GRAALVM_EDITION="${parts%%-*}"
 case "${GRAALVM_EDITION}" in
     "ce"|"ee") ;;
     *)
-        fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')"
+        fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')."
 esac
 
 parts="${parts#*-}"
 readonly JAVA_VERSION="${parts%%-*}"
 case "${JAVA_VERSION}" in
     "java11"|"java17") ;;
+    "${GRAALVM_EDITION}")
+        fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a Java version (e.g., '-java17')."
+        ;;
     *)
         fail "Unsupported Java version: ${JAVA_VERSION} (use 'java11' or 'java17')"
 esac
@@ -115,7 +164,9 @@ readonly GRAALVM_ARCH
 parts="${parts#*-}"
 readonly GRAALVM_VERSION="${parts%%-*}"
 
-if [[ ! "${GRAALVM_VERSION}" =~ ^[0-9\.]*$ ]]; then
+if [[ "${GRAALVM_VERSION}" == "${JAVA_VERSION}" ]]; then
+    fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a GraalVM version (e.g., '-22.1.0')."
+elif [[ ! "${GRAALVM_VERSION}" =~ ^[0-9\.]*$ ]]; then
     fail "Invalid GraalVM version: ${GRAALVM_VERSION}"
 fi
 
@@ -129,7 +180,6 @@ readonly GRAALVM_DL_FILE="${GRAALVM_IDENTIFIER}.tar.gz"
 
 function ensure_command() {
     local cmd=$1
-    is_debug && echo "Looking for ${cmd}..."
     if ! command -v "${cmd}" > /dev/null; then
         echo "Not found."
         echo ""
@@ -151,8 +201,7 @@ readonly GVMD_USER_AGENT="GraalVM Downloader/0.0.1 (arch:${GRAALVM_ARCH}; os:${G
 curl_args=("--show-error" "--location" "--user-agent" "${GVMD_USER_AGENT}")
 gu_args=()
 
-# Silence curl and gu when $CI is set
-if [[ "${CI:-}" == "true" ]]; then
+if [[ "${opt_no_progress}" == "true" ]]; then
     curl_args+=("--silent")
     gu_args+=("--no-progress")
 fi
@@ -211,7 +260,7 @@ case "${GRAALVM_EDITION}" in
                 # shellcheck source=/dev/null
                 source "${GU_CONFIG}"
                 if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
-                    fail "Unable to detect \$GRAAL_EE_DOWNLOAD_TOKEN in ${GU_CONFIG}"
+                    fail "Unable to detect \$GRAAL_EE_DOWNLOAD_TOKEN in ${GU_CONFIG}."
                 fi
             else
                 fail "Unable to find a download token. Please provide it via \$GRAAL_EE_DOWNLOAD_TOKEN or use the GraalVM Updater to persist it to disk."
@@ -253,7 +302,7 @@ case "${GRAALVM_EDITION}" in
         fi
         ;;
     *)
-        fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')"
+        fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')."
 esac
 
 ###########
@@ -284,7 +333,7 @@ popd > /dev/null
 ####################################
 
 echo "Installing GraalVM Native Image..."
-"${GRAALVM_HOME}/bin/gu" install "${gu_args[@]}" native-image
+"${GRAALVM_HOME}/bin/gu" install "${gu_args[@]}" "${opt_components//,/ }"
 
 ############
 # Teardown #
