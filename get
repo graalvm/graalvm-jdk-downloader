@@ -277,7 +277,7 @@ case "${GRAALVM_EDITION}" in
         filters="${filters}&metadata=os:${gds_os}&metadata=arch:${GRAALVM_ARCH}"
 
         echo "Fetching artifact metadata for ${GRAALVM_IDENTIFIER}..."
-        artifacts_response=$(curl "${curl_args[@]}" -X GET "${GDS_BASE}/artifacts?${filters}")
+        artifacts_response=$(curl "${curl_args[@]}" --silent -X GET "${GDS_BASE}/artifacts?${filters}")
         artifact_id=$(echo "$artifacts_response" | grep -o '"id":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact id."
         readonly GRAALVM_DL_FILE_CHECKSUM=$(echo "$artifacts_response" | grep -o '"checksum":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact checksum."
 
