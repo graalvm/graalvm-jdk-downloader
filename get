@@ -328,12 +328,14 @@ fi
 
 popd > /dev/null
 
-####################################
-# Pre-install GraalVM Native Image #
-####################################
+##############################
+# Install GraalVM components #
+##############################
 
-echo "Installing GraalVM Native Image..."
-"${GRAALVM_HOME}/bin/gu" install "${gu_args[@]}" "${opt_components//,/ }"
+if [[ -n "${opt_components}" ]]; then
+    echo "Installing GraalVM components..."
+    "${GRAALVM_HOME}/bin/gu" install "${gu_args[@]}" "${opt_components//,/ }"
+fi
 
 ############
 # Teardown #
