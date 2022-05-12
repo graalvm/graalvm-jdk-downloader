@@ -43,6 +43,11 @@
 set -o errexit # fail on error
 set -o nounset # fail if a variable is undefined
 
+if [[ -z "${GVMD_DIR:-}" ]]; then
+    GVMD_DIR="${HOME}/.graalvm"
+fi
+readonly GVMD_DIR
+
 ###########
 # Helpers #
 ###########
@@ -63,6 +68,7 @@ Options:
     -c | --components   Comma-separated list of GraalVM components (e.g., '-c native-image,nodejs')
     -d | --debug        Enable debug mode.
     -h | --help         Show this help text.
+    -l | --list         List all available GraalVM installations.
     --no-progress       Disable progress printing.
 
 See https://www.graalvm.org/ for more information.
@@ -94,6 +100,10 @@ case "$1" in
         ;;
     -h | --help)
         print_help
+        exit 0
+        ;;
+    -l | --list)
+        ls -l "${GVMD_DIR}" || echo "No GraalVM installations found."
         exit 0
         ;;
     --no-progress)
@@ -209,11 +219,6 @@ fi
 ####################
 # Set up directory #
 ####################
-
-if [[ -z "${GVMD_DIR:-}" ]]; then
-    GVMD_DIR="${HOME}/.graalvm"
-fi
-readonly GVMD_DIR
 
 if [[ ! -d "$GVMD_DIR" ]]; then
     mkdir "${GVMD_DIR}"
