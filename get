@@ -208,7 +208,6 @@ function ensure_command() {
 
 ensure_command "tar"
 ensure_command "curl"
-ensure_command "shasum"
 
 readonly GVMD_USER_AGENT="GraalVM Downloader/0.0.1 (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
 
@@ -318,9 +317,20 @@ esac
 # Verify #
 ###########
 
-echo "Verifying checksum..."
-if ! echo "${GRAALVM_DL_FILE_CHECKSUM}  ${GRAALVM_DL_FILE}" | shasum --algorithm 256 --check --status -; then
-    fail "Failed to verify checksum. Please file an issue at https://github.com/oracle/graal/issues."
+shasum_exec=""
+if command -v "sha256sum" > /dev/null; then
+    shasum_exec="sha256sum"
+elif command -v "shasum" > /dev/null; then
+    shasum_exec="shasum --algorithm 256"
+fi
+
+if [[ -n "${shasum_exec}" ]]; then
+    echo "Verifying checksum..."
+    if ! echo "${GRAALVM_DL_FILE_CHECKSUM}  ${GRAALVM_DL_FILE}" | ${shasum_exec} --check --status -; then
+        fail "Failed to verify checksum. Please file an issue at https://github.com/oracle/graal/issues."
+    fi
+else
+    echo "Skipping checksum verification ('sha256sum' and 'shasum' not found)..."
 fi
 
 ###########
