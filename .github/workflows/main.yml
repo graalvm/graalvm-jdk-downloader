@@ -42,3 +42,20 @@ jobs:
           java --version
       - name: Re-run 'core' script
         run: ./core ${{ matrix.version }}
+      - name: Ensure 'core' script fails
+        run: |
+          exit_code=0
+          ./core foo || exit_code=$?
+          [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; exit 1; }
+          ./core graalvm- || exit_code=$?
+          [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; exit 1; }
+          ./core graalvm-ce || exit_code=$?
+          [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; exit 1; }
+          ./core graalvm-ce-java8-22.1.0 || exit_code=$?
+          [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; exit 1; }
+          ./core graalvm-ce-java11 || exit_code=$?
+          [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; exit 1; }
+          ./core graalvm-ce-java8-0.0.0 || exit_code=$?
+          [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; exit 1; }
+          ./core graalvm-ee-java11-0.0.0 || exit_code=$?
+          [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; exit 1; }
