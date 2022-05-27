@@ -45,21 +45,20 @@ jobs:
       - name: Ensure 'core' script fails
         run: |
           set -x
-          exit_code=0
-          ./core foo || exit_code=$?
+          exit_code=0 && ./core foo || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          ./core graalvm- || exit_code=$?
+          exit_code=0 && ./core graalvm- || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          ./core graalvm-ce || exit_code=$?
+          exit_code=0 && ./core graalvm-ce || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          ./core graalvm-ce-java8-22.1.0 || exit_code=$?
+          exit_code=0 && ./core graalvm-ce-java8-22.1.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          ./core graalvm-ce-java11 || exit_code=$?
+          exit_code=0 && ./core graalvm-ce-java11 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          ./core graalvm-ce-java11-0.0.0 || exit_code=$?
+          exit_code=0 && ./core graalvm-ce-java11-0.0.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          ./core graalvm-ee-java11-0.0.0 || exit_code=$?
+          exit_code=0 && ./core graalvm-ee-java11-0.0.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
           export GRAAL_EE_DOWNLOAD_TOKEN="invalid"
-          ./core graalvm-ee-java11-22.1.0 || exit_code=$?
+          exit_code=0 && ./core graalvm-ee-java11-22.1.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
