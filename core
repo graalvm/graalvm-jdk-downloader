@@ -293,7 +293,7 @@ case "${GRAALVM_EDITION}" in
 
         echo "Downloading ${GRAALVM_DL_FILE}..."
         curl "${curl_args[@]}" -H "x-download-token: ${GRAAL_EE_DOWNLOAD_TOKEN}" \
-             -o "${GRAALVM_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content" || fail "Failed to download '${GRAALVM_DL_FILE}'. ${REPORT_ISSUES_NOTE}"
+             -o "${GRAALVM_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content" || fail "Failed to download '${GRAALVM_DL_FILE}'. Please ensure your download token is valid."
         ;;
     *)
         fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')."
