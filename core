@@ -75,6 +75,8 @@ See https://www.graalvm.org/ for more information.
 EOF
 }
 
+readonly REPORT_ISSUES_NOTE="Please file an issue at https://github.com/oracle/graal/issues."
+
 #############################
 # Check and parse arguments #
 #############################
@@ -211,7 +213,7 @@ ensure_command "curl"
 
 readonly GVMD_USER_AGENT="GraalVM Downloader/0.0.1 (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
 
-curl_args=("--show-error" "--location" "--user-agent" "${GVMD_USER_AGENT}")
+curl_args=("--show-error" "--fail" "--location" "--user-agent" "${GVMD_USER_AGENT}")
 gu_args=()
 
 if [[ "${opt_no_progress}" == "true" ]]; then
@@ -251,10 +253,10 @@ case "${GRAALVM_EDITION}" in
 
         echo "Downloading ${GRAALVM_DL_FILE}..."
         dl_url="${GRAALVM_CE_BASE}/vm-${GRAALVM_VERSION}/${GRAALVM_IDENTIFIER}.tar.gz"
-        curl "${curl_args[@]}" -o "${GRAALVM_DL_FILE}" "${dl_url}"
+        curl "${curl_args[@]}" -o "${GRAALVM_DL_FILE}" "${dl_url}" || fail "Unable to download '${dl_url}'. Are you sure '${GRAALVM_IDENTIFIER}' exists?"
 
         checksum_file="${GRAALVM_DL_FILE}.sha256"
-        curl "${curl_args[@]}" --silent -o "${checksum_file}" "${dl_url}.sha256"
+        curl "${curl_args[@]}" --silent -o "${checksum_file}" "${dl_url}.sha256" || fail "Failed to download '${dl_url}.sha256'. ${REPORT_ISSUES_NOTE}"
         readonly GRAALVM_DL_FILE_CHECKSUM="$(cat "${checksum_file}")"
         rm "${checksum_file}"
         ;;
@@ -285,29 +287,13 @@ case "${GRAALVM_EDITION}" in
         filters="${filters}&metadata=os:${gds_os}&metadata=arch:${GRAALVM_ARCH}"
 
         echo "Fetching artifact metadata for ${GRAALVM_IDENTIFIER}..."
-        artifacts_response=$(curl "${curl_args[@]}" --silent -X GET "${GDS_BASE}/artifacts?${filters}")
+        artifacts_response=$(curl "${curl_args[@]}" --silent -X GET "${GDS_BASE}/artifacts?${filters}") || fail "Unable to find '${GRAALVM_IDENTIFIER}'. Are you sure it exists?"
         artifact_id=$(echo "$artifacts_response" | grep -o '"id":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact id."
         readonly GRAALVM_DL_FILE_CHECKSUM=$(echo "$artifacts_response" | grep -o '"checksum":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact checksum."
 
         echo "Downloading ${GRAALVM_DL_FILE}..."
         curl "${curl_args[@]}" -H "x-download-token: ${GRAAL_EE_DOWNLOAD_TOKEN}" \
-             -o "${GRAALVM_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content"
-
-        # Check file size to verify that the download succeeded. Otherwise, print an error message.
-        case "${GRAALVM_OS}" in
-            "linux")
-                file_size=$(stat -c%s "${GRAALVM_DL_FILE}")
-                ;;
-            "darwin")
-                file_size=$(stat -f%z "${GRAALVM_DL_FILE}")
-                ;;
-            *)
-                fail "Unsupported OS: $(uname -s)"
-        esac
-        if [[ "${file_size}" -lt 2048 ]]; then
-            grep -o '"message":"[^"]*' "${GRAALVM_DL_FILE}" | grep -o '[^"]*$'
-            fail "Download failed."
-        fi
+             -o "${GRAALVM_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content" || fail "Failed to download '${GRAALVM_DL_FILE}'. ${REPORT_ISSUES_NOTE}"
         ;;
     *)
         fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')."
@@ -327,7 +313,7 @@ fi
 if [[ -n "${shasum_exec}" ]]; then
     echo "Verifying checksum..."
     if ! echo "${GRAALVM_DL_FILE_CHECKSUM}  ${GRAALVM_DL_FILE}" | ${shasum_exec} --check --status -; then
-        fail "Failed to verify checksum. Please file an issue at https://github.com/oracle/graal/issues."
+        fail "Failed to verify checksum. ${REPORT_ISSUES_NOTE}"
     fi
 else
     echo "Skipping checksum verification ('sha256sum' and 'shasum' not found)..."
@@ -342,7 +328,7 @@ tar xzf "${GRAALVM_DL_FILE}"
 rm "${GRAALVM_DL_FILE}"
 
 if [[ ! -d "${GRAALVM_HOME}" ]]; then
-    fail "Failed to find GraalVM installation. Please file an issue at https://github.com/oracle/graal/issues."
+    fail "Failed to find GraalVM installation. ${REPORT_ISSUES_NOTE}"
 fi
 
 popd > /dev/null
