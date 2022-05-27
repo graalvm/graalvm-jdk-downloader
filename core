@@ -253,7 +253,7 @@ case "${GRAALVM_EDITION}" in
 
         echo "Downloading ${GRAALVM_DL_FILE}..."
         dl_url="${GRAALVM_CE_BASE}/vm-${GRAALVM_VERSION}/${GRAALVM_IDENTIFIER}.tar.gz"
-        curl "${curl_args[@]}" -o "${GRAALVM_DL_FILE}" "${dl_url}" || fail "Unable to download '${dl_url}'. Are you sure '${GRAALVM_IDENTIFIER}' exists?"
+        curl "${curl_args[@]}" -o "${GRAALVM_DL_FILE}" "${dl_url}" || fail "Failed to download '${dl_url}'."
 
         checksum_file="${GRAALVM_DL_FILE}.sha256"
         curl "${curl_args[@]}" --silent -o "${checksum_file}" "${dl_url}.sha256" || fail "Failed to download '${dl_url}.sha256'. ${REPORT_ISSUES_NOTE}"
@@ -287,7 +287,7 @@ case "${GRAALVM_EDITION}" in
         filters="${filters}&metadata=os:${gds_os}&metadata=arch:${GRAALVM_ARCH}"
 
         echo "Fetching artifact metadata for ${GRAALVM_IDENTIFIER}..."
-        artifacts_response=$(curl "${curl_args[@]}" --silent -X GET "${GDS_BASE}/artifacts?${filters}") || fail "Unable to find '${GRAALVM_IDENTIFIER}'. Are you sure it exists?"
+        artifacts_response=$(curl "${curl_args[@]}" --silent -X GET "${GDS_BASE}/artifacts?${filters}") || fail "Unable to find '${GRAALVM_IDENTIFIER}'."
         artifact_id=$(echo "$artifacts_response" | grep -o '"id":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact id."
         readonly GRAALVM_DL_FILE_CHECKSUM=$(echo "$artifacts_response" | grep -o '"checksum":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact checksum."
 
