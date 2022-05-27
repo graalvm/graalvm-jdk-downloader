@@ -42,11 +42,7 @@
 
 set -o errexit # fail on error
 set -o nounset # fail if a variable is undefined
-
-if [[ -z "${GVMD_DIR:-}" ]]; then
-    GVMD_DIR="${HOME}/.graalvm"
-fi
-readonly GVMD_DIR
+readonly GVMD_VERSION="0.0.2"
 
 ###########
 # Helpers #
@@ -59,19 +55,21 @@ function fail() {
 
 function print_help() {
   cat <<EOF
-GraalVM Downloader
+GraalVM Downloader v${GVMD_VERSION}
 
 Usage:
-    bash <(curl -sL https://get.graalvm.org/core) [options] graalvm-ce-java11-22.1.0
+  bash <(curl -sL https://get.graalvm.org/core) [opts] graalvm-ce-java11-22.1.0
 
 Options:
-    -c | --components   Comma-separated list of GraalVM components (e.g., '-c native-image,nodejs')
-    -d | --debug        Enable debug mode.
-    -h | --help         Show this help text.
-    -l | --list         List all available GraalVM installations.
-    --no-progress       Disable progress printing.
+  -c | --components   Comma-separated list of GraalVM components (e.g.,
+                      '-c native-image,nodejs')
+  -d | --debug        Enable debug mode.
+  -h | --help         Show this help text.
+  --no-progress       Disable progress printing.
+  --to                Existing path where GraalVM will be downloaded to (e.g.,
+                      '--to \$HOME'; current working directory is the default).
 
-See https://www.graalvm.org/ for more information.
+Visit https://www.graalvm.org/ for more information.
 EOF
 }
 
@@ -85,6 +83,7 @@ opt_components=""
 opt_graalvm_identifier=""
 opt_no_progress="${CI:-false}"
 opt_positional=()
+opt_target_path="$(pwd)"
 
 if [[ $# -eq 0 ]]; then
     print_help
@@ -108,9 +107,12 @@ while [[ $# -gt 0 ]]; do
         print_help
         exit 0
         ;;
-    -l | --list)
-        ls -d1 "${GVMD_DIR}"/* || echo "No GraalVM installations found."
-        exit 0
+    --to)
+        opt_target_path="${2:-}"
+        if [[ -z "${opt_target_path}" || ! -d "${opt_target_path}" ]]; then
+            fail "--to argument must be an existing path, got: '${opt_target_path}'."
+        fi
+        shift 2
         ;;
     --no-progress)
         opt_no_progress="true"
@@ -188,7 +190,8 @@ fi
 
 readonly GRAALVM_IDENTIFIER="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_OS}-${GRAALVM_ARCH}-${GRAALVM_VERSION}"
 readonly GRAALVM_NAME="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_VERSION}"
-readonly GRAALVM_DL_FILE="${GRAALVM_IDENTIFIER}.tar.gz"
+readonly GRAALVM_FILENAME="${GRAALVM_IDENTIFIER}.tar.gz"
+readonly TEMP_DL_FILE="$(mktemp)"
 
 ################
 # Housekeeping #
@@ -211,7 +214,7 @@ function ensure_command() {
 ensure_command "tar"
 ensure_command "curl"
 
-readonly GVMD_USER_AGENT="GraalVM Downloader/0.0.1 (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
+readonly GVMD_USER_AGENT="GraalVM Downloader/${GVMD_VERSION} (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
 
 curl_args=("--show-error" "--fail" "--location" "--user-agent" "${GVMD_USER_AGENT}")
 gu_args=()
@@ -225,14 +228,11 @@ fi
 # Set up directory #
 ####################
 
-if [[ ! -d "$GVMD_DIR" ]]; then
-    mkdir "${GVMD_DIR}"
-fi
-
+readonly GVMD_DIR="${opt_target_path}" # opt_target_path can only be an existing path
 readonly GRAALVM_HOME="${GVMD_DIR}/${GRAALVM_NAME}${GRAALVM_HOME_SUFFIX}"
 
 if [[ -d "${GRAALVM_HOME}" ]]; then
-    echo "${GRAALVM_NAME} is already available on your machine!"
+    echo "${GRAALVM_NAME} already exists in the target destination!"
     echo ""
     echo "Use the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:"
     echo "export GRAALVM_HOME=\"${GRAALVM_HOME}\""
@@ -251,13 +251,13 @@ case "${GRAALVM_EDITION}" in
     "ce")
         readonly GRAALVM_CE_BASE="https://github.com/graalvm/graalvm-ce-builds/releases/download"
 
-        echo "Downloading ${GRAALVM_DL_FILE}..."
+        echo "Downloading ${GRAALVM_FILENAME}..."
         dl_url="${GRAALVM_CE_BASE}/vm-${GRAALVM_VERSION}/${GRAALVM_IDENTIFIER}.tar.gz"
-        curl "${curl_args[@]}" -o "${GRAALVM_DL_FILE}" "${dl_url}" || fail "Failed to download '${dl_url}'."
+        curl "${curl_args[@]}" -o "${TEMP_DL_FILE}" "${dl_url}" || fail "Failed to download '${dl_url}'."
 
-        checksum_file="${GRAALVM_DL_FILE}.sha256"
+        checksum_file="$(mktemp)"
         curl "${curl_args[@]}" --silent -o "${checksum_file}" "${dl_url}.sha256" || fail "Failed to download '${dl_url}.sha256'. ${REPORT_ISSUES_NOTE}"
-        readonly GRAALVM_DL_FILE_CHECKSUM="$(cat "${checksum_file}")"
+        readonly GRAALVM_FILENAME_CHECKSUM="$(cat "${checksum_file}")"
         rm "${checksum_file}"
         ;;
     "ee")
@@ -289,11 +289,11 @@ case "${GRAALVM_EDITION}" in
         echo "Fetching artifact metadata for ${GRAALVM_IDENTIFIER}..."
         artifacts_response=$(curl "${curl_args[@]}" --silent -X GET "${GDS_BASE}/artifacts?${filters}") || fail "Unable to find '${GRAALVM_IDENTIFIER}'."
         artifact_id=$(echo "$artifacts_response" | grep -o '"id":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact id."
-        readonly GRAALVM_DL_FILE_CHECKSUM=$(echo "$artifacts_response" | grep -o '"checksum":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact checksum."
+        readonly GRAALVM_FILENAME_CHECKSUM=$(echo "$artifacts_response" | grep -o '"checksum":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact checksum."
 
-        echo "Downloading ${GRAALVM_DL_FILE}..."
+        echo "Downloading ${GRAALVM_FILENAME}..."
         curl "${curl_args[@]}" -H "x-download-token: ${GRAAL_EE_DOWNLOAD_TOKEN}" \
-             -o "${GRAALVM_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content" || fail "Failed to download '${GRAALVM_DL_FILE}'. Please ensure your download token is valid."
+             -o "${TEMP_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content" || fail "Failed to download '${GRAALVM_FILENAME}'. Please ensure your download token is valid."
         ;;
     *)
         fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')."
@@ -312,7 +312,7 @@ fi
 
 if [[ -n "${shasum_exec}" ]]; then
     echo "Verifying checksum..."
-    if ! echo "${GRAALVM_DL_FILE_CHECKSUM}  ${GRAALVM_DL_FILE}" | ${shasum_exec} --check --status -; then
+    if ! echo "${GRAALVM_FILENAME_CHECKSUM}  ${TEMP_DL_FILE}" | ${shasum_exec} --check --status -; then
         fail "Failed to verify checksum. ${REPORT_ISSUES_NOTE}"
     fi
 else
@@ -324,8 +324,8 @@ fi
 ###########
 
 echo "Extracting..."
-tar xzf "${GRAALVM_DL_FILE}"
-rm "${GRAALVM_DL_FILE}"
+tar xzf "${TEMP_DL_FILE}"
+rm "${TEMP_DL_FILE}"
 
 if [[ ! -d "${GRAALVM_HOME}" ]]; then
     fail "Failed to find GraalVM installation. ${REPORT_ISSUES_NOTE}"

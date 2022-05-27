@@ -27,25 +27,27 @@ jobs:
           python3 -m http.server 8080 &
           sleep 5
           bash <(curl -sL http://localhost:8080/core) -h
-          bash <(curl -sL http://localhost:8080/core) -c native-image ${{ matrix.version }}
-          bash <(curl -sL http://localhost:8080/core) -l
+          bash <(curl -sL http://localhost:8080/core) -c native-image --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/core) -c native-image --to $HOME ${{ matrix.version }}
         env:
           GRAAL_EE_DOWNLOAD_TOKEN: ${{ secrets.GRAAL_EE_DOWNLOAD_TOKEN }}
       - name: Check environment
         run: |
           path_suffix="" && [[ "$(uname -s)" != "Darwin" ]] || path_suffix="/Contents/Home"
-          export GRAALVM_HOME="$HOME/.graalvm/${{ matrix.version }}${path_suffix}"
-          export PATH="$HOME/.graalvm/${{ matrix.version }}${path_suffix}/bin:$PATH"
-          export JAVA_HOME="$HOME/.graalvm/${{ matrix.version }}${path_suffix}"
+          export GRAALVM_HOME="$HOME/${{ matrix.version }}${path_suffix}"
+          export PATH="$HOME/${{ matrix.version }}${path_suffix}/bin:$PATH"
+          export JAVA_HOME="$HOME/${{ matrix.version }}${path_suffix}"
           $GRAALVM_HOME/bin/gu --version
           native-image --version
           java --version
-      - name: Re-run 'core' script
-        run: ./core ${{ matrix.version }}
       - name: Ensure 'core' script fails
         run: |
           set -x
           exit_code=0 && ./core foo || exit_code=$?
+          [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
+          exit_code=0 && ./core ${{ matrix.version }} -c "native-image nodejs" || exit_code=$?
+          [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
+          exit_code=0 && ./core ${{ matrix.version }} --to /invalid/path || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
           exit_code=0 && ./core graalvm- || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
