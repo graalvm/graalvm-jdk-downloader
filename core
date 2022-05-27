@@ -62,7 +62,7 @@ function print_help() {
 GraalVM Downloader
 
 Usage:
-    bash <(curl -sL https://graalvm.org/get) [options] graalvm-ce-java11-22.1.0
+    bash <(curl -sL https://get.graalvm.org/core) [options] graalvm-ce-java11-22.1.0
 
 Options:
     -c | --components   Comma-separated list of GraalVM components (e.g., '-c native-image,nodejs')

@@ -19,16 +19,16 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
-      - name: Check 'get' and 'ee-token' scripts
-        run: shellcheck get ee-token
+      - name: Check 'core' and 'ee-token' scripts
+        run: shellcheck core ee-token
         if: matrix.os == 'ubuntu-latest'
-      - name: Run 'get' script
+      - name: Run 'core' script
         run: |
           python3 -m http.server 8080 &
           sleep 5
-          bash <(curl -sL http://localhost:8080/get) -h
-          bash <(curl -sL http://localhost:8080/get) -c native-image ${{ matrix.version }}
-          bash <(curl -sL http://localhost:8080/get) -l
+          bash <(curl -sL http://localhost:8080/core) -h
+          bash <(curl -sL http://localhost:8080/core) -c native-image ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/core) -l
         env:
           GRAAL_EE_DOWNLOAD_TOKEN: ${{ secrets.GRAAL_EE_DOWNLOAD_TOKEN }}
       - name: Check environment
@@ -40,5 +40,5 @@ jobs:
           $GRAALVM_HOME/bin/gu --version
           native-image --version
           java --version
-      - name: Re-run 'get' script
-        run: ./get ${{ matrix.version }}
+      - name: Re-run 'core' script
+        run: ./core ${{ matrix.version }}
