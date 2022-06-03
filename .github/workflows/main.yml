@@ -27,8 +27,8 @@ jobs:
           python3 -m http.server 8080 &
           sleep 5
           bash <(curl -sL http://localhost:8080/core) -h
-          bash <(curl -sL http://localhost:8080/core) -c native-image --to $HOME ${{ matrix.version }}
-          bash <(curl -sL http://localhost:8080/core) -c native-image --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/core) -c native-image,espresso --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/core) -c native-image,espresso --to $HOME ${{ matrix.version }}
         env:
           GRAAL_EE_DOWNLOAD_TOKEN: ${{ secrets.GRAAL_EE_DOWNLOAD_TOKEN }}
       - name: Check environment

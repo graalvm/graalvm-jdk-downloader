@@ -79,7 +79,7 @@ readonly REPORT_ISSUES_NOTE="Please file an issue at https://github.com/oracle/g
 # Check and parse arguments #
 #############################
 
-opt_components=""
+opt_components=()
 opt_graalvm_identifier=""
 opt_no_progress="${CI:-false}"
 opt_positional=()
@@ -93,10 +93,10 @@ fi
 while [[ $# -gt 0 ]]; do
     case "$1" in
     -c | --components)
-        opt_components="${2:-}"
-        if [[ -z "${opt_components}" || "${opt_components}" == *" "* ]]; then
-            fail "--components arguments must be a comma-separated list of GraalVM components and should not contain a space, got: '${opt_components}'."
+        if [[ -z "${2:-}" || "${2:-}" == *" "* ]]; then
+            fail "--components arguments must be a comma-separated list of GraalVM components and should not contain a space, got: '${2:-}'."
         fi
+        IFS=',' read -r -a opt_components <<< "${2:-}"
         shift 2
         ;;
     -d | --debug)
@@ -337,9 +337,9 @@ popd > /dev/null
 # Install GraalVM components #
 ##############################
 
-if [[ -n "${opt_components}" ]]; then
+if [[ "${#opt_components[@]}" -gt 0 ]]; then
     echo "Installing GraalVM components..."
-    "${GRAALVM_HOME}/bin/gu" install "${gu_args[@]}" "${opt_components//,/ }"
+    "${GRAALVM_HOME}/bin/gu" install "${gu_args[@]}" "${opt_components[@]}"
 fi
 
 ############
