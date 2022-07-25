@@ -129,11 +129,14 @@ echo "Please check your email inbox and accept the license to activate your down
 # Persist new token #
 #####################
 
-read -r -p "Would you like to persist this token at ${HOME}/.gu/config on this machine? (y/N): " user_input
+read -r -p "Would you like to persist this token at ${GU_CONFIG} on this machine? (y/N): " user_input
 
 if [[ "${user_input}" == [yY] ]]; then
-    echo "#$(date)" > "${HOME}/.gu/config"
-    echo "GRAAL_EE_DOWNLOAD_TOKEN=${token}" >> "${HOME}/.gu/config"
+    if [[ ! -d "$(dirname "${GU_CONFIG}")" ]]; then
+        mkdir -p "$(dirname "${GU_CONFIG}")"
+    fi
+    echo "#$(date)" > "${GU_CONFIG}"
+    echo "GRAAL_EE_DOWNLOAD_TOKEN=${token}" >> "${GU_CONFIG}"
     echo "Download token persisted."
 else
     echo "Download token not persisted."
