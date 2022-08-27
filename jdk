@@ -42,7 +42,13 @@
 
 set -o errexit # fail on error
 set -o nounset # fail if a variable is undefined
-readonly GVMD_VERSION="0.0.2"
+readonly GVMD_VERSION="0.0.3"
+readonly GVMD_NAME="GraalVM JDK Downloader"
+readonly DEFAULT_COMPONENTS=("native-image")
+readonly DEFAULT_GRAALVM_VERSION="22.2.0"
+readonly DEFAULT_CE_IDENTIFIER="graalvm-ce-java17-${DEFAULT_GRAALVM_VERSION}"
+readonly DEFAULT_EE_IDENTIFIER="graalvm-ee-java17-${DEFAULT_GRAALVM_VERSION}"
+readonly GU_CONFIG="${HOME}/.gu/config"
 
 ###########
 # Helpers #
@@ -55,10 +61,10 @@ function fail() {
 
 function print_help() {
   cat <<EOF
-GraalVM Downloader v${GVMD_VERSION}
+${GVMD_NAME} v${GVMD_VERSION}
 
 Usage:
-  bash <(curl -sL https://get.graalvm.org/jdk) [opts] graalvm-ce-java11-22.1.0
+  bash <(curl -sL https://get.graalvm.org/jdk) [opts] [${DEFAULT_CE_IDENTIFIER}]
 
 Options:
   -c | --components   Comma-separated list of GraalVM components (e.g.,
@@ -79,16 +85,11 @@ readonly REPORT_ISSUES_NOTE="Please file an issue at https://github.com/oracle/g
 # Check and parse arguments #
 #############################
 
-opt_components=()
+opt_components=("${DEFAULT_COMPONENTS[@]}")
 opt_graalvm_identifier=""
 opt_no_progress="${CI:-false}"
 opt_positional=()
 opt_target_path="$(pwd)"
-
-if [[ $# -eq 0 ]]; then
-    print_help
-    exit 0
-fi
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -96,7 +97,8 @@ while [[ $# -gt 0 ]]; do
         if [[ -z "${2:-}" || "${2:-}" == *" "* ]]; then
             fail "--components arguments must be a comma-separated list of GraalVM components and should not contain a space, got: '${2:-}'."
         fi
-        IFS=',' read -r -a opt_components <<< "${2:-}"
+        IFS=',' read -r -a opt_user_components <<< "${2:-}"
+        opt_components+=("${opt_user_components[@]}")
         shift 2
         ;;
     -d | --debug)
@@ -128,7 +130,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ "${#opt_positional[@]}" -ne 1 || "${opt_positional[0]}" != "graalvm-"* ]]; then
+if [[ "${#opt_positional[@]}" -eq 0 ]]; then
+    if [[ -n "${GRAAL_EE_DOWNLOAD_TOKEN:-}" || -f "${GU_CONFIG}" ]]; then
+        opt_graalvm_identifier="${DEFAULT_EE_IDENTIFIER}"
+    else
+        opt_graalvm_identifier="${DEFAULT_CE_IDENTIFIER}"
+    fi
+elif [[ "${#opt_positional[@]}" -ne 1 || "${opt_positional[0]}" != "graalvm-"* ]]; then
     fail "A GraalVM identifier (e.g., 'graalvm-ce-java11-22.1.0') needs to be the only position argument, got ${#opt_positional[@]}: '${opt_positional[*]:-}'."
 else
     opt_graalvm_identifier="${opt_positional[0]}"
@@ -188,10 +196,11 @@ elif [[ ! "${GRAALVM_VERSION}" =~ ^[0-9\.]*$ ]]; then
     fail "Invalid GraalVM version: ${GRAALVM_VERSION}"
 fi
 
-readonly GRAALVM_IDENTIFIER="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_OS}-${GRAALVM_ARCH}-${GRAALVM_VERSION}"
-readonly GRAALVM_NAME="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_VERSION}"
-readonly GRAALVM_FILENAME="${GRAALVM_IDENTIFIER}.tar.gz"
-readonly TEMP_DL_FILE="$(mktemp)"
+GRAALVM_IDENTIFIER="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_OS}-${GRAALVM_ARCH}-${GRAALVM_VERSION}"
+GRAALVM_NAME="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_VERSION}"
+GRAALVM_FILENAME="${GRAALVM_IDENTIFIER}.tar.gz"
+TEMP_DL_FILE="$(mktemp)"
+readonly GRAALVM_IDENTIFIER GRAALVM_NAME GRAALVM_FILENAME TEMP_DL_FILE
 
 ################
 # Housekeeping #
@@ -214,7 +223,7 @@ function ensure_command() {
 ensure_command "tar"
 ensure_command "curl"
 
-readonly GVMD_USER_AGENT="GraalVM Downloader/${GVMD_VERSION} (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
+readonly GVMD_USER_AGENT="${GVMD_NAME}/${GVMD_VERSION} (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
 
 curl_args=("--show-error" "--fail" "--location" "--user-agent" "${GVMD_USER_AGENT}")
 gu_args=()
@@ -257,13 +266,13 @@ case "${GRAALVM_EDITION}" in
 
         checksum_file="$(mktemp)"
         curl "${curl_args[@]}" --silent -o "${checksum_file}" "${dl_url}.sha256" || fail "Failed to download '${dl_url}.sha256'. ${REPORT_ISSUES_NOTE}"
-        readonly GRAALVM_FILENAME_CHECKSUM="$(cat "${checksum_file}")"
+        GRAALVM_FILENAME_CHECKSUM="$(cat "${checksum_file}")"
+        readonly GRAALVM_FILENAME_CHECKSUM
         rm "${checksum_file}"
         ;;
     "ee")
         readonly GDS_BASE="https://gds.oracle.com/api/20220101"
         readonly PRODUCT_ID="D53FAE8052773FFAE0530F15000AA6C6"
-        readonly GU_CONFIG="${HOME}/.gu/config"
 
         if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
             if [[ -f "${GU_CONFIG}" ]]; then
@@ -273,7 +282,10 @@ case "${GRAALVM_EDITION}" in
                     fail "Unable to detect \$GRAAL_EE_DOWNLOAD_TOKEN in ${GU_CONFIG}."
                 fi
             else
-                fail "Unable to find a download token. Please provide it via \$GRAAL_EE_DOWNLOAD_TOKEN or use the GraalVM Updater to persist it to disk."
+                fail "Unable to find a download token. Please provide it via \$GRAAL_EE_DOWNLOAD_TOKEN or run the following script to set one up:
+  
+  bash <(curl -sL https://get.graalvm.org/ee-token)
+"
             fi
         fi
 
@@ -281,7 +293,7 @@ case "${GRAALVM_EDITION}" in
         gds_java="${JAVA_VERSION#java}"
         filters="${filters}&metadata=java:jdk${gds_java}"
         gds_os="${GRAALVM_OS}"
-        if [[ "$gds_os" == "darwin" ]]; then
+        if [[ "${gds_os}" == "darwin" ]]; then
             gds_os="macos" # GDS uses 'macos' instead of 'darwin'
         fi
         filters="${filters}&metadata=os:${gds_os}&metadata=arch:${GRAALVM_ARCH}"
@@ -289,7 +301,8 @@ case "${GRAALVM_EDITION}" in
         echo "Fetching artifact metadata for ${GRAALVM_IDENTIFIER}..."
         artifacts_response=$(curl "${curl_args[@]}" --silent -X GET "${GDS_BASE}/artifacts?${filters}") || fail "Unable to find '${GRAALVM_IDENTIFIER}'."
         artifact_id=$(echo "$artifacts_response" | grep -o '"id":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact id."
-        readonly GRAALVM_FILENAME_CHECKSUM=$(echo "$artifacts_response" | grep -o '"checksum":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact checksum."
+        GRAALVM_FILENAME_CHECKSUM=$(echo "$artifacts_response" | grep -o '"checksum":"[^"]*' | grep -o '[^"]*$') || fail "Unable to find artifact checksum."
+        readonly GRAALVM_FILENAME_CHECKSUM
 
         echo "Downloading ${GRAALVM_FILENAME}..."
         curl "${curl_args[@]}" -H "x-download-token: ${GRAAL_EE_DOWNLOAD_TOKEN}" \
