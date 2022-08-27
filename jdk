@@ -58,7 +58,7 @@ function print_help() {
 GraalVM Downloader v${GVMD_VERSION}
 
 Usage:
-  bash <(curl -sL https://get.graalvm.org/core) [opts] graalvm-ce-java11-22.1.0
+  bash <(curl -sL https://get.graalvm.org/jdk) [opts] graalvm-ce-java11-22.1.0
 
 Options:
   -c | --components   Comma-separated list of GraalVM components (e.g.,

@@ -19,16 +19,16 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
-      - name: Check 'core' and 'ee-token' scripts
-        run: shellcheck core ee-token
+      - name: Check 'jdk' and 'ee-token' scripts
+        run: shellcheck jdk ee-token
         if: matrix.os == 'ubuntu-latest'
-      - name: Run 'core' script
+      - name: Run 'jdk' script
         run: |
           python3 -m http.server 8080 &
           sleep 5
-          bash <(curl -sL http://localhost:8080/core) -h
-          bash <(curl -sL http://localhost:8080/core) -c native-image,espresso --to $HOME ${{ matrix.version }}
-          bash <(curl -sL http://localhost:8080/core) -c native-image,espresso --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/jdk) -h
+          bash <(curl -sL http://localhost:8080/jdk) -c native-image,espresso --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/jdk) -c native-image,espresso --to $HOME ${{ matrix.version }}
         env:
           GRAAL_EE_DOWNLOAD_TOKEN: ${{ secrets.GRAAL_EE_DOWNLOAD_TOKEN }}
       - name: Check environment
@@ -40,27 +40,27 @@ jobs:
           $GRAALVM_HOME/bin/gu --version
           native-image --version
           java --version
-      - name: Ensure 'core' script fails
+      - name: Ensure 'jdk' script fails
         run: |
           set -x
-          exit_code=0 && ./core foo || exit_code=$?
+          exit_code=0 && ./jdk foo || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./core ${{ matrix.version }} -c "native-image nodejs" || exit_code=$?
+          exit_code=0 && ./jdk ${{ matrix.version }} -c "native-image nodejs" || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./core ${{ matrix.version }} --to /invalid/path || exit_code=$?
+          exit_code=0 && ./jdk ${{ matrix.version }} --to /invalid/path || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./core graalvm- || exit_code=$?
+          exit_code=0 && ./jdk graalvm- || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./core graalvm-ce || exit_code=$?
+          exit_code=0 && ./jdk graalvm-ce || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./core graalvm-ce-java8-22.1.0 || exit_code=$?
+          exit_code=0 && ./jdk graalvm-ce-java8-22.1.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./core graalvm-ce-java11 || exit_code=$?
+          exit_code=0 && ./jdk graalvm-ce-java11 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./core graalvm-ce-java11-0.0.0 || exit_code=$?
+          exit_code=0 && ./jdk graalvm-ce-java11-0.0.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./core graalvm-ee-java11-0.0.0 || exit_code=$?
+          exit_code=0 && ./jdk graalvm-ee-java11-0.0.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
           export GRAAL_EE_DOWNLOAD_TOKEN="invalid"
-          exit_code=0 && ./core graalvm-ee-java11-22.1.0 || exit_code=$?
+          exit_code=0 && ./jdk graalvm-ee-java11-22.1.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
