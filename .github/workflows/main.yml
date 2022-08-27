@@ -10,25 +10,30 @@ on:
   workflow_dispatch:
 
 jobs:
+  shellcheck:
+    name: Shellcheck scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Check 'native-image', 'jdk', and 'ee-token' scripts
+        run: shellcheck native-image jdk ee-token
   build:
-    name: ${{ matrix.version }} on ${{ matrix.os }}
+    name: ${{ matrix.script }} + ${{ matrix.version }} + ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         version: [graalvm-ce-java11-22.2.0, graalvm-ee-java17-22.2.0]
         os: [ubuntu-latest, macos-latest]
+        script: [native-image, jdk]
     steps:
       - uses: actions/checkout@v2
-      - name: Check 'jdk' and 'ee-token' scripts
-        run: shellcheck jdk ee-token
-        if: matrix.os == 'ubuntu-latest'
-      - name: Run 'jdk' script
+      - name: Run '${{ matrix.script }}' script
         run: |
           python3 -m http.server 8080 &
           sleep 5
-          bash <(curl -sL http://localhost:8080/jdk) -h
-          bash <(curl -sL http://localhost:8080/jdk) -c native-image,python --to $HOME ${{ matrix.version }}
-          bash <(curl -sL http://localhost:8080/jdk) -c native-image,python --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/${{ matrix.script }}) -h
+          bash <(curl -sL http://localhost:8080/${{ matrix.script }}) -c native-image,python --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/${{ matrix.script }}) -c native-image,python --to $HOME ${{ matrix.version }}
         env:
           GRAAL_EE_DOWNLOAD_TOKEN: ${{ secrets.GRAAL_EE_DOWNLOAD_TOKEN }}
       - name: Check environment
@@ -41,27 +46,27 @@ jobs:
           java --version
           native-image --version
           graalpython --version
-      - name: Ensure 'jdk' script fails
+      - name: Ensure '${{ matrix.script }}' script fails
         run: |
           set -x
-          exit_code=0 && ./jdk foo || exit_code=$?
+          exit_code=0 && ./${{ matrix.script }} foo || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./jdk ${{ matrix.version }} -c "native-image nodejs" || exit_code=$?
+          exit_code=0 && ./${{ matrix.script }} ${{ matrix.version }} -c "native-image nodejs" || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./jdk ${{ matrix.version }} --to /invalid/path || exit_code=$?
+          exit_code=0 && ./${{ matrix.script }} ${{ matrix.version }} --to /invalid/path || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./jdk graalvm- || exit_code=$?
+          exit_code=0 && ./${{ matrix.script }} graalvm- || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./jdk graalvm-ce || exit_code=$?
+          exit_code=0 && ./${{ matrix.script }} graalvm-ce || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./jdk graalvm-ce-java8-22.1.0 || exit_code=$?
+          exit_code=0 && ./${{ matrix.script }} graalvm-ce-java8-22.1.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./jdk graalvm-ce-java11 || exit_code=$?
+          exit_code=0 && ./${{ matrix.script }} graalvm-ce-java11 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./jdk graalvm-ce-java11-0.0.0 || exit_code=$?
+          exit_code=0 && ./${{ matrix.script }} graalvm-ce-java11-0.0.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
-          exit_code=0 && ./jdk graalvm-ee-java11-0.0.0 || exit_code=$?
+          exit_code=0 && ./${{ matrix.script }} graalvm-ee-java11-0.0.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }
           export GRAAL_EE_DOWNLOAD_TOKEN="invalid"
-          exit_code=0 && ./jdk graalvm-ee-java11-22.1.0 || exit_code=$?
+          exit_code=0 && ./${{ matrix.script }} graalvm-ee-java11-22.1.0 || exit_code=$?
           [[ ${exit_code} -ne 0 ]] || { echo "Previous line did not fail"; false; }

@@ -43,8 +43,8 @@
 set -o errexit # fail on error
 set -o nounset # fail if a variable is undefined
 readonly GVMD_VERSION="0.0.3"
-readonly GVMD_NAME="GraalVM JDK Downloader"
-readonly DEFAULT_COMPONENT=""
+readonly GVMD_NAME="GraalVM Native Image Downloader"
+readonly DEFAULT_COMPONENT="native-image"
 readonly DEFAULT_GRAALVM_VERSION="22.2.0"
 readonly DEFAULT_CE_IDENTIFIER="graalvm-ce-java17-${DEFAULT_GRAALVM_VERSION}"
 readonly DEFAULT_EE_IDENTIFIER="graalvm-ee-java17-${DEFAULT_GRAALVM_VERSION}"
