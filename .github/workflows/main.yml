@@ -1,4 +1,4 @@
-name: 'GraalVM Downloader Tests'
+name: 'Tests'
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        version: [graalvm-ce-java11-22.1.0, graalvm-ee-java17-22.1.0]
+        version: [graalvm-ce-java11-22.2.0, graalvm-ee-java17-22.2.0]
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v2
@@ -27,8 +27,8 @@ jobs:
           python3 -m http.server 8080 &
           sleep 5
           bash <(curl -sL http://localhost:8080/jdk) -h
-          bash <(curl -sL http://localhost:8080/jdk) -c native-image,espresso --to $HOME ${{ matrix.version }}
-          bash <(curl -sL http://localhost:8080/jdk) -c native-image,espresso --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/jdk) -c native-image,python --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/jdk) -c native-image,python --to $HOME ${{ matrix.version }}
         env:
           GRAAL_EE_DOWNLOAD_TOKEN: ${{ secrets.GRAAL_EE_DOWNLOAD_TOKEN }}
       - name: Check environment
@@ -38,8 +38,9 @@ jobs:
           export PATH="$HOME/${{ matrix.version }}${path_suffix}/bin:$PATH"
           export JAVA_HOME="$HOME/${{ matrix.version }}${path_suffix}"
           $GRAALVM_HOME/bin/gu --version
-          native-image --version
           java --version
+          native-image --version
+          graalpython --version
       - name: Ensure 'jdk' script fails
         run: |
           set -x
