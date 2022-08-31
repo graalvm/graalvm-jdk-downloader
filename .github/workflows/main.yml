@@ -23,30 +23,34 @@ jobs:
     strategy:
       matrix:
         version: [graalvm-ce-java11-22.2.0, graalvm-ee-java17-22.2.0]
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         script: [native-image, jdk]
     steps:
       - uses: actions/checkout@v2
       - name: Run '${{ matrix.script }}' script
+        shell: bash
         run: |
           python3 -m http.server 8080 &
           sleep 5
           bash <(curl -sL http://localhost:8080/${{ matrix.script }}) -h
-          bash <(curl -sL http://localhost:8080/${{ matrix.script }}) -c native-image,python --to $HOME ${{ matrix.version }}
-          bash <(curl -sL http://localhost:8080/${{ matrix.script }}) -c native-image,python --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/${{ matrix.script }}) -c native-image,nodejs --to $HOME ${{ matrix.version }}
+          bash <(curl -sL http://localhost:8080/${{ matrix.script }}) -c native-image,nodejs --to $HOME ${{ matrix.version }}
         env:
           GRAAL_EE_DOWNLOAD_TOKEN: ${{ secrets.GRAAL_EE_DOWNLOAD_TOKEN }}
       - name: Check environment
+        shell: bash
         run: |
           path_suffix="" && [[ "$(uname -s)" != "Darwin" ]] || path_suffix="/Contents/Home"
+          exec_suffix="" && [[ "$(uname -s)" != "MINGW64_NT-"* ]] || exec_suffix=".cmd"
           export GRAALVM_HOME="$HOME/${{ matrix.version }}${path_suffix}"
           export PATH="$HOME/${{ matrix.version }}${path_suffix}/bin:$PATH"
           export JAVA_HOME="$HOME/${{ matrix.version }}${path_suffix}"
-          $GRAALVM_HOME/bin/gu --version
-          java --version
-          native-image --version
-          graalpython --version
+          java -version
+          native-image${exec_suffix} --version
+          node${exec_suffix} --version:graalvm
+          gu${exec_suffix} --version
       - name: Ensure '${{ matrix.script }}' script fails
+        shell: bash
         run: |
           set -x
           exit_code=0 && ./${{ matrix.script }} foo || exit_code=$?

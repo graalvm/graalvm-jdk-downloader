@@ -164,19 +164,27 @@ case "${JAVA_VERSION}" in
         fail "Unsupported Java version: ${JAVA_VERSION} (use 'java11' or 'java17')"
 esac
 
+GRAALVM_HOME_SUFFIX=""
+GRAALVM_GU_EXEC="gu"
+GRAALVM_FILENAME_EXT="tar.gz"
 case "$(uname -s)" in
     "Linux")
-        GRAALVM_OS="linux"
-        GRAALVM_HOME_SUFFIX=""
-        ;;
+        GRAALVM_OS="linux";;
     "Darwin")
-        GRAALVM_OS="darwin"
         GRAALVM_HOME_SUFFIX="/Contents/Home"
-        ;;
+        GRAALVM_OS="darwin";;
+    "CYGWIN_NT-"*)
+        GRAALVM_GU_EXEC="gu.cmd"
+        GRAALVM_FILENAME_EXT="zip"
+        GRAALVM_OS="windows";;
+    "MINGW64_NT-"*)
+        GRAALVM_GU_EXEC="gu.cmd"
+        GRAALVM_FILENAME_EXT="zip"
+        GRAALVM_OS="windows";;
     *)
         fail "Unsupported OS: $(uname -s)"
 esac
-readonly GRAALVM_OS GRAALVM_HOME_SUFFIX
+readonly GRAALVM_OS GRAALVM_HOME_SUFFIX GRAALVM_GU_EXEC GRAALVM_FILENAME_EXT
 
 case "$(uname -m)" in
     "x86_64")
@@ -201,7 +209,7 @@ fi
 
 GRAALVM_IDENTIFIER="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_OS}-${GRAALVM_ARCH}-${GRAALVM_VERSION}"
 GRAALVM_NAME="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_VERSION}"
-GRAALVM_FILENAME="${GRAALVM_IDENTIFIER}.tar.gz"
+GRAALVM_FILENAME="${GRAALVM_IDENTIFIER}.${GRAALVM_FILENAME_EXT}"
 TEMP_DL_FILE="$(mktemp)"
 readonly GRAALVM_IDENTIFIER GRAALVM_NAME GRAALVM_FILENAME TEMP_DL_FILE
 
@@ -223,8 +231,12 @@ function ensure_command() {
     fi
 }
 
-ensure_command "tar"
 ensure_command "curl"
+if [[ "${GRAALVM_OS}" == "windows" ]]; then
+    ensure_command "unzip"
+else
+    ensure_command "tar"
+fi
 
 readonly GVMD_USER_AGENT="${GVMD_NAME}/${GVMD_VERSION} (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
 
@@ -264,7 +276,7 @@ case "${GRAALVM_EDITION}" in
         readonly GRAALVM_CE_BASE="https://github.com/graalvm/graalvm-ce-builds/releases/download"
 
         echo "Downloading ${GRAALVM_FILENAME}..."
-        dl_url="${GRAALVM_CE_BASE}/vm-${GRAALVM_VERSION}/${GRAALVM_IDENTIFIER}.tar.gz"
+        dl_url="${GRAALVM_CE_BASE}/vm-${GRAALVM_VERSION}/${GRAALVM_IDENTIFIER}.${GRAALVM_FILENAME_EXT}"
         curl "${curl_args[@]}" -o "${TEMP_DL_FILE}" "${dl_url}" || fail "Failed to download '${dl_url}'."
 
         checksum_file="$(mktemp)"
@@ -316,7 +328,7 @@ case "${GRAALVM_EDITION}" in
 esac
 
 ###########
-# Verify #
+# Verify  #
 ###########
 
 shasum_exec=""
@@ -340,7 +352,11 @@ fi
 ###########
 
 echo "Extracting..."
-tar xzf "${TEMP_DL_FILE}"
+if [[ "${GRAALVM_OS}" == "windows" ]]; then
+    unzip -q "${TEMP_DL_FILE}"
+else
+    tar xzf "${TEMP_DL_FILE}"
+fi
 rm "${TEMP_DL_FILE}"
 
 if [[ ! -d "${GRAALVM_HOME}" ]]; then
@@ -355,7 +371,7 @@ popd > /dev/null
 
 if [[ "${#opt_components[@]}" -gt 0 ]]; then
     echo "Installing GraalVM components..."
-    "${GRAALVM_HOME}/bin/gu" install "${gu_args[@]}" "${opt_components[@]}"
+    "${GRAALVM_HOME}/bin/${GRAALVM_GU_EXEC}" install "${gu_args[@]}" "${opt_components[@]}"
 fi
 
 ############
