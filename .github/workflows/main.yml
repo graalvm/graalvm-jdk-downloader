@@ -10,13 +10,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  shellcheck:
-    name: Shellcheck scripts
+  check:
+    name: Check scripts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Check 'native-image', 'jdk', and 'ee-token' scripts
-        run: shellcheck native-image jdk ee-token
+        run: |
+          shellcheck native-image jdk ee-token
+          [[ $(diff -y --suppress-common-lines jdk native-image | wc -l) -eq 3 ]] || { echo "'jdk' and 'native-image' scripts have diverged too much"; false; }
   build:
     name: ${{ matrix.script }} + ${{ matrix.version }} + ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
