@@ -66,7 +66,7 @@ function ensure_command() {
     local cmd=$1
     is_debug && echo "Looking for ${cmd}..."
     if ! command -v "${cmd}" > /dev/null; then
-        echo "Not found."
+        echo "${cmd} not found."
         echo ""
         echo "======================================================================================================"
         echo " Please install ${cmd} on your system using your favourite package manager."
@@ -79,10 +79,11 @@ function ensure_command() {
 
 ensure_command "curl"
 
-readonly GDS_BASE="https://gds.oracle.com/api/20220101"
-readonly LICENSE_ID="D53FA58D12817B3CE0530F15000A74CA"
-readonly GU_CONFIG="${HOME}/.gu/config"
-readonly GVMD_USER_AGENT="GraalVM Downloader/0.0.1 (arch:$(uname -m); os:$(uname -s)"
+GDS_BASE="https://gds.oracle.com/api/20220101"
+LICENSE_ID="D53FA58D12817B3CE0530F15000A74CA"
+GU_CONFIG="${HOME}/.gu/config"
+GVMD_USER_AGENT="GraalVM Token Generator/0.0.2 (arch:$(uname -m); os:$(uname -s)"
+readonly GDS_BASE LICENSE_ID GU_CONFIG GVMD_USER_AGENT
 
 #########################
 # Detect existing token #
