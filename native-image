@@ -241,7 +241,7 @@ fi
 readonly GVMD_USER_AGENT="${GVMD_NAME}/${GVMD_VERSION} (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
 
 curl_args=("--show-error" "--fail" "--location" "--user-agent" "${GVMD_USER_AGENT}")
-gu_args=()
+gu_args=("--non-interactive")
 
 if [[ "${opt_no_progress}" == "true" ]]; then
     curl_args+=("--silent")
