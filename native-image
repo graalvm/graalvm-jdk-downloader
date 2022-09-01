@@ -64,7 +64,7 @@ function print_help() {
 ${GVMD_NAME} v${GVMD_VERSION}
 
 Usage:
-  bash <(curl -sL https://get.graalvm.org/jdk) [opts] [${DEFAULT_CE_IDENTIFIER}]
+  bash <(curl -sL https://get.graalvm.org/native-image) [opts] [${DEFAULT_CE_IDENTIFIER}]
 
 Options:
   -c | --components   Comma-separated list of GraalVM components (e.g.,
