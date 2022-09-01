@@ -72,8 +72,8 @@ Options:
   -d | --debug        Enable debug mode.
   -h | --help         Show this help text.
   --no-progress       Disable progress printing.
-  --to                Existing path where GraalVM will be downloaded to (e.g.,
-                      '--to \$HOME'; current working directory is the default).
+  --to                Existing path to where artifacts will be downloaded (e.g.,
+                      '--to "\$HOME"'; current directory is the default).
 
 Visit https://www.graalvm.org/ for more information.
 EOF
