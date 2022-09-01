@@ -220,7 +220,7 @@ readonly GRAALVM_IDENTIFIER GRAALVM_NAME GRAALVM_FILENAME TEMP_DL_FILE
 function ensure_command() {
     local cmd=$1
     if ! command -v "${cmd}" > /dev/null; then
-        echo "Not found."
+        echo "${cmd} not found."
         echo ""
         echo "======================================================================================================"
         echo " Please install ${cmd} on your system using your favourite package manager."
