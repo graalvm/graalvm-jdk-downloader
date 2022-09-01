@@ -42,8 +42,9 @@
 
 set -o errexit # fail on error
 set -o nounset # fail if a variable is undefined
-readonly GVMD_VERSION="0.0.3"
-readonly GVMD_NAME="GraalVM JDK Downloader"
+readonly GVMD_VERSION="0.0.4"
+readonly GVMD_NAME="GraalVM JDK"
+readonly GVMD_SCRIPT="jdk"
 readonly DEFAULT_COMPONENT=""
 readonly DEFAULT_GRAALVM_VERSION="22.2.0"
 readonly DEFAULT_CE_IDENTIFIER="graalvm-ce-java17-${DEFAULT_GRAALVM_VERSION}"
@@ -61,10 +62,10 @@ function fail() {
 
 function print_help() {
   cat <<EOF
-${GVMD_NAME} v${GVMD_VERSION}
+${GVMD_NAME} Downloader v${GVMD_VERSION}
 
 Usage:
-  bash <(curl -sL https://get.graalvm.org/jdk) [opts] [${DEFAULT_CE_IDENTIFIER}]
+  bash <(curl -sL https://get.graalvm.org/${GVMD_SCRIPT}) [opts] [${DEFAULT_CE_IDENTIFIER}]
 
 Options:
   -c | --components   Comma-separated list of GraalVM components (e.g.,
@@ -220,13 +221,11 @@ readonly GRAALVM_IDENTIFIER GRAALVM_NAME GRAALVM_FILENAME TEMP_DL_FILE
 function ensure_command() {
     local cmd=$1
     if ! command -v "${cmd}" > /dev/null; then
-        echo "${cmd} not found."
-        echo ""
-        echo "======================================================================================================"
-        echo " Please install ${cmd} on your system using your favourite package manager."
-        echo ""
-        echo " Restart after installing ${cmd}."
-        echo "======================================================================================================"
+        cat <<EOF
+${cmd} not found.
+
+Please install '${cmd}' on your system and restart afterward.
+EOF
         fail ""
     fi
 }
@@ -238,7 +237,7 @@ else
     ensure_command "tar"
 fi
 
-readonly GVMD_USER_AGENT="${GVMD_NAME}/${GVMD_VERSION} (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
+readonly GVMD_USER_AGENT="${GVMD_NAME} Downloader/${GVMD_VERSION} (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
 
 curl_args=("--show-error" "--fail" "--location" "--user-agent" "${GVMD_USER_AGENT}")
 gu_args=("--non-interactive")
@@ -256,12 +255,14 @@ readonly GVMD_DIR="${opt_target_path}" # opt_target_path can only be an existing
 readonly GRAALVM_HOME="${GVMD_DIR}/${GRAALVM_NAME}${GRAALVM_HOME_SUFFIX}"
 
 if [[ -d "${GRAALVM_HOME}" ]]; then
-    echo "${GRAALVM_NAME} already exists in the target destination!"
-    echo ""
-    echo "Use the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:"
-    echo "export GRAALVM_HOME=\"${GRAALVM_HOME}\""
-    echo "export PATH=\"${GRAALVM_HOME}/bin:\$PATH\""
-    echo "export JAVA_HOME=\"${GRAALVM_HOME}\""
+    cat <<EOF
+${GVMD_NAME} (${GRAALVM_NAME}) already exists in the target destination!
+
+Run the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:
+$ export GRAALVM_HOME="${GRAALVM_HOME}"
+$ export PATH="${GRAALVM_HOME}/bin:\$PATH"
+$ export JAVA_HOME="${GRAALVM_HOME}"
+EOF
     exit 0
 fi
 
@@ -299,7 +300,7 @@ case "${GRAALVM_EDITION}" in
             else
                 fail "Unable to find a download token. Please provide it via \$GRAAL_EE_DOWNLOAD_TOKEN or run the following script to set one up:
   
-  bash <(curl -sL https://get.graalvm.org/ee-token)
+$ bash <(curl -sL https://get.graalvm.org/ee-token)
 "
             fi
         fi
@@ -372,15 +373,69 @@ popd > /dev/null
 if [[ "${#opt_components[@]}" -gt 0 ]]; then
     echo "Installing GraalVM components..."
     "${GRAALVM_HOME}/bin/${GRAALVM_GU_EXEC}" install "${gu_args[@]}" "${opt_components[@]}"
+
+    if [[ ${opt_components[*]} == *"native-image"*  ]]; then
+        cat <<EOF
+
++------------------------------------------------------------------------------+
+| Prerequisites for GraalVM Native Image                                       |
++------------------------------------------------------------------------------+
+EOF
+        if [[ "${GRAALVM_OS}" == "linux" ]]; then
+            cat <<EOF
+| On Oracle Linux, use the YUM package manager:                                |
+| $ sudo yum install gcc glibc-devel zlib-devel                                |
+|                                                                              |
+| Some Linux distributions may additionally require libstdc++-static.          |
+| You can install libstdc++-static if the optional repositories are enabled    |
+| ('ol7_optional_latest' on Oracle Linux 7 and 'ol8_codeready_builder' on      |
+|  Oracle Linux 8).                                                            |
+|                                                                              |
+| On Ubuntu, use the 'apt-get' package manager:                                |
+| $ sudo apt-get install build-essential libz-dev zlib1g-dev                   |
+|                                                                              |
+| On other Linux distributions, use the DNF package manager:                   |
+| $ sudo dnf install gcc glibc-devel zlib-devel libstdc++-static               |
+EOF
+        elif [[ "${GRAALVM_OS}" == "darwin" ]]; then
+            cat <<EOF
+| Please ensure Xcode is installed:                                            |
+| $ xcode-select --install                                                     |
+EOF
+        elif [[ "${GRAALVM_OS}" == "windows" ]]; then
+              cat <<EOF
+| To use Native Image on Windows, install Visual Studio and Microsoft Visual   |
+| C++ (MSVC).                                                                  |
+| There are two installation options:                                          |
+|   * Install the Visual Studio Build Tools with the Windows 10 SDK            |
+|   * Install Visual Studio with the Windows 10 SDK                            |
+|                                                                              |
+| You can use Visual Studio 2017 version 15.9 or later.                        |
+|                                                                              |
+| The 'native-image' tool will only work when it is run from an 'x64 Native    |
+| Tools Command Prompt'. The command for initiating an x64 Native Tools        |
+| command prompt varies according to whether you only have the Visual Studio   |
+| Build Tools installed or if you have the full Visual Studio 2019 installed.  |
+EOF
+        else
+            echo "Unexpected OS: ${GRAALVM_OS}"
+        fi
+        cat <<EOF
++------------------------------------------------------------------------------+
+EOF
+    fi
 fi
 
 ############
 # Teardown #
 ############
 
-echo "${GRAALVM_NAME} has been downloaded successfully!"
-echo ""
-echo "Use the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:"
-echo "export GRAALVM_HOME=\"${GRAALVM_HOME}\""
-echo "export PATH=\"${GRAALVM_HOME}/bin:\$PATH\""
-echo "export JAVA_HOME=\"${GRAALVM_HOME}\""
+cat <<EOF
+
+${GVMD_NAME} (${GRAALVM_NAME}) has been downloaded successfully!
+
+Run the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:
+$ export GRAALVM_HOME="${GRAALVM_HOME}"
+$ export PATH="${GRAALVM_HOME}/bin:\$PATH"
+$ export JAVA_HOME="${GRAALVM_HOME}"
+EOF
