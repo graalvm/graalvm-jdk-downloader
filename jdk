@@ -76,7 +76,7 @@ Options:
   --to                Existing path to where artifacts will be downloaded (e.g.,
                       '--to "\$HOME"'; current directory is the default).
 
-Visit https://www.graalvm.org/ for more information.
+Visit https://github.com/graalvm/get.graalvm.org for more information.
 EOF
 }
 
