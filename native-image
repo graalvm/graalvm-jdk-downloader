@@ -322,7 +322,10 @@ $ bash <(curl -sL https://get.graalvm.org/ee-token)
 
         echo "Downloading ${GRAALVM_FILENAME}..."
         curl "${curl_args[@]}" -H "x-download-token: ${GRAAL_EE_DOWNLOAD_TOKEN}" \
-             -o "${TEMP_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content" || fail "Failed to download '${GRAALVM_FILENAME}'. Please ensure your download token is valid."
+             -o "${TEMP_DL_FILE}" -X GET "${GDS_BASE}/artifacts/${artifact_id}/content" || fail "
+Failed to download '${GRAALVM_FILENAME}'.
+
+Please make sure you activated your download token by accepting the license sent to you via email. Also note that there can only be one active token per email address at a time. Requesting another token, even on different machines, using the same email address will deactivate any previously generated token."
         ;;
     *)
         fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')."
