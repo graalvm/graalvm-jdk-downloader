@@ -68,12 +68,12 @@ Usage:
   bash <(curl -sL https://get.graalvm.org/${GVMD_SCRIPT}) [opts] [${DEFAULT_CE_IDENTIFIER}]
 
 Options:
-  -c | --components   Comma-separated list of GraalVM components (e.g.,
-                      '-c python,nodejs')
+  -c | --components   Comma-separated list of GraalVM components (for example,
+                      '-c python,nodejs').
   -d | --debug        Enable debug mode.
   -h | --help         Show this help text.
   --no-progress       Disable progress printing.
-  --to                Existing path to where artifacts will be downloaded (e.g.,
+  --to                Existing path to where artifacts will be downloaded (for example,
                       '--to "\$HOME"'; current directory is the default).
 
 Visit https://github.com/graalvm/get.graalvm.org for more information.
@@ -99,7 +99,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
     -c | --components)
         if [[ -z "${2:-}" || "${2:-}" == *" "* ]]; then
-            fail "--components arguments must be a comma-separated list of GraalVM components and should not contain a space, got: '${2:-}'."
+            fail "--components arguments must be a comma-separated list of GraalVM components and must not contain a space, got: '${2:-}'."
         fi
         IFS=',' read -r -a opt_user_components <<< "${2:-}"
         opt_components+=("${opt_user_components[@]}")
@@ -141,7 +141,7 @@ if [[ "${#opt_positional[@]}" -eq 0 ]]; then
         opt_graalvm_identifier="${DEFAULT_CE_IDENTIFIER}"
     fi
 elif [[ "${#opt_positional[@]}" -ne 1 || "${opt_positional[0]}" != "graalvm-"* ]]; then
-    fail "A GraalVM identifier (e.g., 'graalvm-ce-java11-22.1.0') needs to be the only position argument, got ${#opt_positional[@]}: '${opt_positional[*]:-}'."
+    fail "A GraalVM identifier (for example, 'graalvm-ce-java11-22.1.0') must be the only position argument, got ${#opt_positional[@]}: '${opt_positional[*]:-}'."
 else
     opt_graalvm_identifier="${opt_positional[0]}"
 fi
@@ -159,10 +159,10 @@ readonly JAVA_VERSION="${parts%%-*}"
 case "${JAVA_VERSION}" in
     "java11"|"java17") ;;
     "${GRAALVM_EDITION}")
-        fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a Java version (e.g., '-java17')."
+        fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a Java version (for example, '-java17')."
         ;;
     *)
-        fail "Unsupported Java version: ${JAVA_VERSION} (use 'java11' or 'java17')"
+        fail "Unsupported Java version: ${JAVA_VERSION} (use 'java11' or 'java17')."
 esac
 
 GRAALVM_HOME_SUFFIX=""
@@ -203,7 +203,7 @@ parts="${parts#*-}"
 readonly GRAALVM_VERSION="${parts%%-*}"
 
 if [[ "${GRAALVM_VERSION}" == "${JAVA_VERSION}" ]]; then
-    fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a GraalVM version (e.g., '-22.1.0')."
+    fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a GraalVM version (for example, '-22.1.0')."
 elif [[ ! "${GRAALVM_VERSION}" =~ ^[0-9\.]*$ ]]; then
     fail "Invalid GraalVM version: ${GRAALVM_VERSION}"
 fi
@@ -224,7 +224,7 @@ function ensure_command() {
         cat <<EOF
 ${cmd} not found.
 
-Please install '${cmd}' on your system and restart afterward.
+Please install '${cmd}' on your system and then restart.
 EOF
         fail ""
     fi

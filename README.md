@@ -6,26 +6,26 @@ This repository is used to maintain and host GraalVM download scripts at https:/
 
 The download scripts
 
-- support [GraalVM Community Edition (CE)][ce] and [GraalVM Enterprise Edition (EE)][ee] (requires a token, [see here](#set-up-a-download-token-for-graalvm-enterprise-installations))
-- support Linux, macOS, and Windows (via [Git Bash][git-bash], [Cygwin][cygwin], or [Windows Subsystem for Linux][wsl])
+- support [GraalVM Community Edition (CE)][ce] and [GraalVM Enterprise Edition (EE)][ee]. (EE requires a token, for more information see [Set Up a Download Token for GraalVM Enterprise Installations](#set-up-a-download-token-for-graalvm-enterprise-installations).)
+- support Linux, macOS, and Windows (via [Git Bash][git-bash], [Cygwin][cygwin], or [Windows Subsystem for Linux][wsl], respectively)
 - are non-interactive and designed to be used in automated build pipelines or on developer machines
-- set up GraalVM installations in the current working directory by default (can be changed with the `--to` option)
-- verify checksums of downloaded artifacts before extracting if `sha256sum` or `shasum` are available
+- set up GraalVM installations in the current working directory by default (can be changed using the `--to` option)
+- verify checksums of downloaded artifacts before extracting if either `sha256sum` or `shasum` is available
 - only require `bash`, `curl`, and either `tar` (Linux/macOS) or `unzip` (Windows)
 
 
 ## Download GraalVM Native Image
 
 **Examples**
-
+<!-- FYI, "Latest release" is the preferred term by Oracle to describe JDK17. I assume that's what you meant. -->
 ```bash
-# Download the latest GraalVM Native Image (defaults to highest available JDK and to EE if a token is found)
+# Download the latest GraalVM Native Image (defaults to the latest release of the JDK and, if a token is found, to EE)
 $ bash <(curl -sL https://get.graalvm.org/native-image)
 
-# Download a specific GraalVM Community Native Image
+# Download a specific GraalVM CE Native Image
 $ bash <(curl -sL https://get.graalvm.org/native-image) graalvm-ce-java17-22.2.0
 
-# Download a specific GraalVM Enterprise Native Image to a specific directory
+# Download a specific GraalVM EE Native Image to a specific directory
 $ bash <(curl -sL https://get.graalvm.org/native-image) --to "$HOME" graalvm-ee-java17-22.2.0
 ```
 
@@ -39,12 +39,12 @@ Usage:
   bash <(curl -sL https://get.graalvm.org/native-image) [opts] [graalvm-ce-java17-22.2.0]
 
 Options:
-  -c | --components   Comma-separated list of GraalVM components (e.g.,
-                      '-c python,nodejs')
+  -c | --components   Comma-separated list of GraalVM components (for example,
+                      '-c python,nodejs').
   -d | --debug        Enable debug mode.
   -h | --help         Show this help text.
   --no-progress       Disable progress printing.
-  --to                Existing path to where artifacts will be downloaded (e.g.,
+  --to                Existing path to where artifacts will be downloaded (for example,
                       '--to "$HOME"'; current directory is the default).
 
 Visit https://github.com/graalvm/get.graalvm.org for more information.
@@ -55,13 +55,13 @@ Visit https://github.com/graalvm/get.graalvm.org for more information.
 **Examples**
 
 ```bash
-# Download the latest GraalVM JDK (defaults to highest available JDK and to EE if a token is found)
+# Download the latest GraalVM JDK (defaults to the latest release and, if a token is found, to EE)
 $ bash <(curl -sL https://get.graalvm.org/jdk)
 
-# Download a specific GraalVM Community JDK
+# Download a specific GraalVM CE JDK
 $ bash <(curl -sL https://get.graalvm.org/jdk) graalvm-ee-java17-22.2.0
 
-# Download a specific GraalVM Enterprise JDK and install the Python and Node.js runtimes
+# Download a specific GraalVM EE JDK and install the Python and Node.js runtimes
 $ bash <(curl -sL https://get.graalvm.org/jdk) -c python,nodejs graalvm-ee-java17-22.2.0
 ```
 
@@ -75,12 +75,12 @@ Usage:
   bash <(curl -sL https://get.graalvm.org/jdk) [opts] [graalvm-ce-java17-22.2.0]
 
 Options:
-  -c | --components   Comma-separated list of GraalVM components (e.g.,
-                      '-c python,nodejs')
+  -c | --components   Comma-separated list of GraalVM components (for example,
+                      '-c python,nodejs').
   -d | --debug        Enable debug mode.
   -h | --help         Show this help text.
   --no-progress       Disable progress printing.
-  --to                Existing path to where artifacts will be downloaded (e.g.,
+  --to                Existing path to where artifacts will be downloaded (for example,
                       '--to "$HOME"'; current directory is the default).
 
 Visit https://github.com/graalvm/get.graalvm.org for more information.
@@ -88,21 +88,23 @@ Visit https://github.com/graalvm/get.graalvm.org for more information.
 
 ### Set Up a Download Token for GraalVM Enterprise Installations
 
-For GraalVM Enterprise installations, a valid download token is required.
-To generate such a token, run the following command in a shell.
+A valid download token is required for GraalVM Enterprise installations.
+To generate a download token, run the following command in a shell.
 Note that, unlike the CLI downloaders, this command is interactive and should not be executed as part of an automated build pipeline.
+<!--What are the CLI downloaders?-->
 Instead, run the command once and provide the token either via the `$GRAAL_EE_DOWNLOAD_TOKEN` environment variable or within the `$HOME/.gu/config` file.
-Since tokens are tied to an email account, please treat them as confidential and encrypt them (GitHub Actions, for example, supports [encrypted secrets][gha-secrets])
+<!-- not sure about this ^^ sentence. I think it requires more words... what does "provide" mean? Perhaps be more explicit and tell users to store the token in a env-var or in the config file. -->
+Download tokens are associated with an email account, so treat them as confidential and encrypt them. (GitHub Actions, for example, supports [encrypted secrets][gha-secrets].)
 
 ```bash
 $ bash <(curl -sL https://get.graalvm.org/ee-token)
 ```
 
-## Contributing
+## Contribute
 
-We welcome code contributions. To get started, you will need to sign the [Oracle Contributor Agreement][oca] (OCA).
+We welcome code contributions. To get started, sign the [Oracle Contributor Agreement][oca] (OCA).
 
-Only pull requests from committers that can be verified as having signed the OCA can be accepted.
+We only accept pull requests from committers that can be verified as having signed the OCA.
 
 
 [ce]: https://github.com/graalvm/graalvm-ce-builds/releases
