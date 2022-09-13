@@ -42,10 +42,9 @@
 
 set -o errexit # fail on error
 set -o nounset # fail if a variable is undefined
-readonly GVMD_VERSION="0.0.4"
-readonly GVMD_NAME="GraalVM JDK"
+readonly GVMD_VERSION="0.1.0"
+readonly GVMD_NAME="GraalVM JDK Downloader"
 readonly GVMD_SCRIPT="jdk"
-readonly DEFAULT_COMPONENT=""
 readonly DEFAULT_GRAALVM_VERSION="22.2.0"
 readonly DEFAULT_CE_IDENTIFIER="graalvm-ce-java17-${DEFAULT_GRAALVM_VERSION}"
 readonly DEFAULT_EE_IDENTIFIER="graalvm-ee-java17-${DEFAULT_GRAALVM_VERSION}"
@@ -62,7 +61,7 @@ function fail() {
 
 function print_help() {
   cat <<EOF
-${GVMD_NAME} Downloader v${GVMD_VERSION}
+${GVMD_NAME} v${GVMD_VERSION}
 
 Usage:
   bash <(curl -sL https://get.graalvm.org/${GVMD_SCRIPT}) [opts] [${DEFAULT_CE_IDENTIFIER}]
@@ -86,10 +85,7 @@ readonly REPORT_ISSUES_NOTE="Please file an issue at https://github.com/oracle/g
 # Check and parse arguments #
 #############################
 
-opt_components=()
-if [[ -n "${DEFAULT_COMPONENT}" ]]; then
-    opt_components+=("${DEFAULT_COMPONENT}")
-fi
+opt_components=("native-image")
 opt_graalvm_identifier=""
 opt_no_progress="${CI:-false}"
 opt_positional=()
@@ -237,7 +233,7 @@ else
     ensure_command "tar"
 fi
 
-readonly GVMD_USER_AGENT="${GVMD_NAME} Downloader/${GVMD_VERSION} (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
+readonly GVMD_USER_AGENT="${GVMD_NAME}/${GVMD_VERSION} (arch:${GRAALVM_ARCH}; os:${GRAALVM_OS}; java:${JAVA_VERSION})"
 
 curl_args=("--show-error" "--fail" "--location" "--user-agent" "${GVMD_USER_AGENT}")
 gu_args=("--non-interactive")

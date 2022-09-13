@@ -15,10 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Check 'native-image', 'jdk', and 'ee-token' scripts
-        run: |
-          shellcheck native-image jdk ee-token
-          [[ $(diff -y --suppress-common-lines jdk native-image | wc -l) -eq 3 ]] || { echo "'jdk' and 'native-image' scripts have diverged too much"; false; }
+      - name: Check 'jdk' and 'ee-token' scripts
+        run: shellcheck jdk ee-token
   build:
     name: ${{ matrix.script }} + ${{ matrix.version }} + ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -26,7 +24,7 @@ jobs:
       matrix:
         version: [graalvm-ce-java11-22.2.0, graalvm-ee-java17-22.2.0]
         os: [ubuntu-latest, macos-latest, windows-latest]
-        script: [native-image, jdk]
+        script: [jdk]
     steps:
       - uses: actions/checkout@v2
       - name: Run '${{ matrix.script }}' script
