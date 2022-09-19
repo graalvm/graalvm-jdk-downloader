@@ -1,6 +1,6 @@
 # GraalVM JDK Downloader
 
-[![Tests](https://github.com/graalvm/get.graalvm.org/actions/workflows/main.yml/badge.svg)](https://github.com/graalvm/get.graalvm.org/actions/workflows/main.yml)
+[![Tests](https://github.com/graalvm/graalvm-jdk-downloader/actions/workflows/main.yml/badge.svg)](https://github.com/graalvm/graalvm-jdk-downloader/actions/workflows/main.yml)
 
 This repository is used to maintain and host the GraalVM JDK Downloader at https://get.graalvm.org/.
 
@@ -11,7 +11,7 @@ The GraalVM JDK Downloader
 - supports [GraalVM Community Edition (CE)][ce] and [GraalVM Enterprise Edition (EE)][ee]. (EE requires a token, for more information see [Set Up a Download Token for GraalVM Enterprise Installations](#set-up-a-download-token-for-graalvm-enterprise-installations).)
 - supports Linux, macOS, and Windows (via [Git Bash][git-bash], [Cygwin][cygwin], or [Windows Subsystem for Linux][wsl])
 - is non-interactive and designed to be used in automated build pipelines or on developer machines
-- sets up GraalVM installations in the current working directory by default (can be changed using the `--to` option)
+- sets up GraalVM installations in the current working directory (can be changed using the `--to` option)
 - verifies checksums of downloaded artifacts before extracting if either `sha256sum` or `shasum` is available
 - only requires `bash`, `curl`, and either `tar` (Linux/macOS) or `unzip` (Windows)
 
@@ -19,16 +19,16 @@ The GraalVM JDK Downloader
 ## Examples
 
 ```bash
-# Download the latest GraalVM JDK incl. Native Image (defaults to the latest release of the JDK and, if a token is found, to EE)
+# Download the latest GraalVM JDK (defaults to the latest release of the JDK and, if a token is found, to EE)
 $ bash <(curl -sL https://get.graalvm.org/jdk)
 
-# Download a specific GraalVM CE JDK incl. Native Image
+# Download a specific GraalVM CE JDK
 $ bash <(curl -sL https://get.graalvm.org/jdk) graalvm-ce-java17-22.2.0
 
-# Download a specific GraalVM EE JDK incl. Native Image to a specific directory
+# Download a specific GraalVM EE JDK to a specific directory
 $ bash <(curl -sL https://get.graalvm.org/jdk) --to "$HOME" graalvm-ee-java17-22.2.0
 
-# Download a specific GraalVM EE JDK incl. Native Image and install the Python and Node.js runtimes
+# Download a specific GraalVM EE JDK and install the Python and Node.js runtimes
 $ bash <(curl -sL https://get.graalvm.org/jdk) -c python,nodejs graalvm-ee-java17-22.2.0
 ```
 
@@ -36,7 +36,7 @@ $ bash <(curl -sL https://get.graalvm.org/jdk) -c python,nodejs graalvm-ee-java1
 
 ```
 $ bash <(curl -sL https://get.graalvm.org/jdk) --help
-GraalVM JDK Downloader v0.0.4
+GraalVM JDK Downloader v1.0.0
 
 Usage:
   bash <(curl -sL https://get.graalvm.org/jdk) [opts] [graalvm-ce-java17-22.2.0]
@@ -50,7 +50,7 @@ Options:
   --to                Existing path to where artifacts will be downloaded (for example,
                       '--to "$HOME"'; current directory is the default).
 
-Visit https://github.com/graalvm/get.graalvm.org for more information.
+Visit https://github.com/graalvm/graalvm-jdk-downloader for more information.
 ```
 
 ## Set Up a Download Token for GraalVM Enterprise Installations

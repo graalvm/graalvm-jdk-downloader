@@ -42,7 +42,7 @@
 
 set -o errexit # fail on error
 set -o nounset # fail if a variable is undefined
-readonly GVMD_VERSION="0.1.0"
+readonly GVMD_VERSION="1.0.0"
 readonly GVMD_NAME="GraalVM JDK Downloader"
 readonly GVMD_SCRIPT="jdk"
 readonly DEFAULT_GRAALVM_VERSION="22.2.0"
@@ -75,11 +75,11 @@ Options:
   --to                Existing path to where artifacts will be downloaded (for example,
                       '--to "\$HOME"'; current directory is the default).
 
-Visit https://github.com/graalvm/get.graalvm.org for more information.
+Visit https://github.com/graalvm/graalvm-jdk-downloader for more information.
 EOF
 }
 
-readonly REPORT_ISSUES_NOTE="Please file an issue at https://github.com/oracle/graal/issues."
+readonly REPORT_ISSUES_NOTE="Please file an issue at https://github.com/graalvm/graalvm-jdk-downloader/issues."
 
 #############################
 # Check and parse arguments #
@@ -252,7 +252,7 @@ readonly GRAALVM_HOME="${GVMD_DIR}/${GRAALVM_NAME}${GRAALVM_HOME_SUFFIX}"
 
 if [[ -d "${GRAALVM_HOME}" ]]; then
     cat <<EOF
-${GVMD_NAME} (${GRAALVM_NAME}) already exists in the target destination!
+GraalVM JDK (${GRAALVM_NAME}) already exists in the target destination!
 
 Run the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:
 $ export GRAALVM_HOME="${GRAALVM_HOME}"
@@ -431,7 +431,7 @@ fi
 
 cat <<EOF
 
-${GVMD_NAME} (${GRAALVM_NAME}) has been downloaded successfully!
+GraalVM JDK (${GRAALVM_NAME}) has been downloaded successfully!
 
 Run the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:
 $ export GRAALVM_HOME="${GRAALVM_HOME}"
