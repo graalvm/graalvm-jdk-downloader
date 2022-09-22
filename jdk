@@ -398,7 +398,11 @@ EOF
 EOF
         elif [[ "${GRAALVM_OS}" == "darwin" ]]; then
             cat <<EOF
-| Please ensure Xcode is installed:                                            |
+| If you are using macOS Catalina and later you may need to remove the         |
+| quarantine attribute before use:                                             |
+| $ sudo xattr -r -d com.apple.quarantine "${GRAALVM_HOME}" |
+|                                                                              |
+| Please also ensure Xcode is installed:                                       |
 | $ xcode-select --install                                                     |
 EOF
         elif [[ "${GRAALVM_OS}" == "windows" ]]; then
