@@ -79,6 +79,24 @@ Visit https://github.com/graalvm/graalvm-jdk-downloader for more information.
 EOF
 }
 
+function print_epilog() {
+    if command -v sdk > /dev/null; then
+        cat <<EOF
+
+If you like to manage this GraalVM JDK installation with SDKMAN! (see https://sdkman.io/usage#localversion for more info), run:
+$ sdk install java ${GRAALVM_NAME} "${GRAALVM_HOME}"
+EOF
+    fi
+
+    cat <<EOF
+
+Run the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:
+$ export GRAALVM_HOME="${GRAALVM_HOME}"
+$ export PATH="${GRAALVM_HOME}/bin:\$PATH"
+$ export JAVA_HOME="${GRAALVM_HOME}"
+EOF
+}
+
 readonly REPORT_ISSUES_NOTE="Please file an issue at https://github.com/graalvm/graalvm-jdk-downloader/issues."
 
 #############################
@@ -251,14 +269,8 @@ readonly GVMD_DIR="${opt_target_path}" # opt_target_path can only be an existing
 readonly GRAALVM_HOME="${GVMD_DIR}/${GRAALVM_NAME}${GRAALVM_HOME_SUFFIX}"
 
 if [[ -d "${GRAALVM_HOME}" ]]; then
-    cat <<EOF
-GraalVM JDK (${GRAALVM_NAME}) already exists in the target destination!
-
-Run the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:
-$ export GRAALVM_HOME="${GRAALVM_HOME}"
-$ export PATH="${GRAALVM_HOME}/bin:\$PATH"
-$ export JAVA_HOME="${GRAALVM_HOME}"
-EOF
+    printf "\nGraalVM JDK (%s) already exists in the target destination!\n" "${GRAALVM_NAME}"
+    print_epilog
     exit 0
 fi
 
@@ -433,12 +445,6 @@ fi
 # Teardown #
 ############
 
-cat <<EOF
 
-GraalVM JDK (${GRAALVM_NAME}) has been downloaded successfully!
-
-Run the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:
-$ export GRAALVM_HOME="${GRAALVM_HOME}"
-$ export PATH="${GRAALVM_HOME}/bin:\$PATH"
-$ export JAVA_HOME="${GRAALVM_HOME}"
-EOF
+printf "\nGraalVM JDK (%s) has been downloaded successfully!\n" "${GRAALVM_NAME}"
+print_epilog
