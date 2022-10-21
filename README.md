@@ -26,10 +26,10 @@ $ bash <(curl -sL https://get.graalvm.org/jdk)
 $ bash <(curl -sL https://get.graalvm.org/jdk) graalvm-ce-java17-22.2.0
 
 # Download a specific GraalVM EE JDK to a specific directory
-$ bash <(curl -sL https://get.graalvm.org/jdk) --to "$HOME" graalvm-ee-java17-22.2.0
+$ bash <(curl -sL https://get.graalvm.org/jdk) --to "$HOME" graalvm-ee-java17-22.3.0
 
 # Download a specific GraalVM EE JDK and install the Python and Node.js runtimes
-$ bash <(curl -sL https://get.graalvm.org/jdk) -c python,nodejs graalvm-ee-java17-22.2.0
+$ bash <(curl -sL https://get.graalvm.org/jdk) -c python,nodejs graalvm-ee-java17-22.3.0
 ```
 
 ## Help

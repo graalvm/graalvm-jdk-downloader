@@ -45,9 +45,8 @@ set -o nounset # fail if a variable is undefined
 readonly GVMD_VERSION="1.0.0"
 readonly GVMD_NAME="GraalVM JDK Downloader"
 readonly GVMD_SCRIPT="jdk"
-readonly DEFAULT_GRAALVM_VERSION="22.2.0"
-readonly DEFAULT_CE_IDENTIFIER="graalvm-ce-java17-${DEFAULT_GRAALVM_VERSION}"
-readonly DEFAULT_EE_IDENTIFIER="graalvm-ee-java17-${DEFAULT_GRAALVM_VERSION}"
+readonly DEFAULT_CE_IDENTIFIER="graalvm-ce-java17-22.2.0"
+readonly DEFAULT_EE_IDENTIFIER="graalvm-ee-java17-22.3.0"
 readonly GU_CONFIG="${HOME}/.gu/config"
 
 ###########
@@ -171,12 +170,12 @@ esac
 parts="${parts#*-}"
 readonly JAVA_VERSION="${parts%%-*}"
 case "${JAVA_VERSION}" in
-    "java11"|"java17") ;;
+    "java11"|"java17"|"java19") ;;
     "${GRAALVM_EDITION}")
         fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a Java version (for example, '-java17')."
         ;;
     *)
-        fail "Unsupported Java version: ${JAVA_VERSION} (use 'java11' or 'java17')."
+        fail "Unsupported Java version: ${JAVA_VERSION} (use 'java11', 'java17', or 'java19')."
 esac
 
 GRAALVM_HOME_SUFFIX=""
