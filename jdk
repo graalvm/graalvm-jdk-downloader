@@ -83,7 +83,7 @@ function print_epilog() {
         cat <<EOF
 
 If you like to manage this GraalVM JDK installation with SDKMAN! (see https://sdkman.io/usage#localversion for more info), run:
-$ sdk install java graalvm-${GRAALVM_EDITION}-${GRAALVM_VERSION:0:4} "${GRAALVM_HOME}"
+$ sdk install java ${GRAALVM_VERSION:0:6}.r${JAVA_VERSION:4:2}-grl${GRAALVM_EDITION:0:1} "${GRAALVM_HOME}"
 EOF
     fi
 
