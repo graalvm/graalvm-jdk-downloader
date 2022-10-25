@@ -79,7 +79,7 @@ EOF
 }
 
 function print_epilog() {
-    if command -v sdk > /dev/null; then
+    if [[ -n "${SDKMAN_VERSION:-}" ]]; then
         cat <<EOF
 
 If you like to manage this GraalVM JDK installation with SDKMAN! (see https://sdkman.io/usage#localversion for more info), run:
