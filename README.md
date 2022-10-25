@@ -23,7 +23,7 @@ The GraalVM JDK Downloader
 $ bash <(curl -sL https://get.graalvm.org/jdk)
 
 # Download a specific GraalVM CE JDK
-$ bash <(curl -sL https://get.graalvm.org/jdk) graalvm-ce-java17-22.2.0
+$ bash <(curl -sL https://get.graalvm.org/jdk) graalvm-ce-java17-22.3.0
 
 # Download a specific GraalVM EE JDK to a specific directory
 $ bash <(curl -sL https://get.graalvm.org/jdk) --to "$HOME" graalvm-ee-java17-22.3.0
@@ -39,7 +39,7 @@ $ bash <(curl -sL https://get.graalvm.org/jdk) --help
 GraalVM JDK Downloader v1.0.0
 
 Usage:
-  bash <(curl -sL https://get.graalvm.org/jdk) [opts] [graalvm-ce-java17-22.2.0]
+  bash <(curl -sL https://get.graalvm.org/jdk) [opts] [graalvm-ce-java17-22.3.0]
 
 Options:
   -c | --components   Comma-separated list of GraalVM components (for example,
