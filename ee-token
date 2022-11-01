@@ -81,9 +81,18 @@ ensure_command "curl"
 
 GDS_BASE="https://gds.oracle.com/api/20220101"
 LICENSE_ID="D53FA58D12817B3CE0530F15000A74CA"
+PROBE_ARTIFACT_ID="EADE25DCAF6B2655E0531618000AAB08"
 GU_CONFIG="${HOME}/.gu/config"
-GVMD_USER_AGENT="GraalVM Token Generator/0.0.2 (arch:$(uname -m); os:$(uname -s)"
+GVMD_USER_AGENT="GraalVM Download Token Generator/1.0.0 (arch:$(uname -m); os:$(uname -s)"
 readonly GDS_BASE LICENSE_ID GU_CONFIG GVMD_USER_AGENT
+
+function is_valid_token() {
+    response_code=$(curl --silent --head --write-out '%{http_code}' --location \
+                -o /dev/null --user-agent "${GVMD_USER_AGENT}" \
+                -H "x-download-token: $1" \
+                -X GET "${GDS_BASE}/artifacts/${PROBE_ARTIFACT_ID}/content" || "400")
+    [[ "${response_code}" == "200" ]]
+}
 
 #########################
 # Detect existing token #
@@ -94,17 +103,27 @@ if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
         # shellcheck source=/dev/null
         source "${GU_CONFIG}"
         if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
-            fail "Unable to detect \$GRAAL_EE_DOWNLOAD_TOKEN in ${GU_CONFIG}"
+            fail "Unable to detect \$GRAAL_EE_DOWNLOAD_TOKEN in '${GU_CONFIG}'. Please remove the file and try again."
         else
-            echo "Download token already persisted in ${GU_CONFIG}:"
-            echo "Your download token is: '${GRAAL_EE_DOWNLOAD_TOKEN}'"
-            exit
+            if is_valid_token "${GRAAL_EE_DOWNLOAD_TOKEN}"; then
+                echo "A valid download token is already stored in '${GU_CONFIG}'."
+                echo "Your download token is: '${GRAAL_EE_DOWNLOAD_TOKEN}'"
+                exit
+            fi
+            echo "The token stored in '${GU_CONFIG}' is not yet valid, because you have not yet accepted the license emailed to you, or no longer valid, because you have generated another token for the same email address."
+            read -r -p "Would you like to generate a new token? (Y/n): " user_input
+            if [[ "${user_input}" != [yY] ]]; then
+                exit
+            fi
         fi
     fi
 else
-    echo "Download token already set via \$GRAAL_EE_DOWNLOAD_TOKEN:"
-    echo "Your download token is: '${GRAAL_EE_DOWNLOAD_TOKEN}'"
-    exit
+    if is_valid_token "${GRAAL_EE_DOWNLOAD_TOKEN}"; then
+        echo "You already provide a valid download token via \$GRAAL_EE_DOWNLOAD_TOKEN: '${GRAAL_EE_DOWNLOAD_TOKEN}'."
+        exit
+    else
+        fail "The download token you provided via \$GRAAL_EE_DOWNLOAD_TOKEN is invalid: '${GRAAL_EE_DOWNLOAD_TOKEN}'."
+    fi
 fi
 
 #####################
@@ -130,7 +149,7 @@ echo "Please check your email inbox and accept the license to activate your down
 # Persist new token #
 #####################
 
-read -r -p "Would you like to persist this token at ${GU_CONFIG} on this machine? (y/N): " user_input
+read -r -p "Would you like to persist this token in '${GU_CONFIG}' on this machine? (y/N): " user_input
 
 if [[ "${user_input}" == [yY] ]]; then
     if [[ ! -d "$(dirname "${GU_CONFIG}")" ]]; then
