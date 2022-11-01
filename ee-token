@@ -87,11 +87,11 @@ GVMD_USER_AGENT="GraalVM Download Token Generator/1.0.0 (arch:$(uname -m); os:$(
 readonly GDS_BASE LICENSE_ID GU_CONFIG GVMD_USER_AGENT
 
 function is_valid_token() {
-    response_code=$(curl --silent --head --write-out '%{http_code}' --location \
+    response_code=$(curl --silent --head --write-out '%{http_code}' \
                 -o /dev/null --user-agent "${GVMD_USER_AGENT}" \
                 -H "x-download-token: $1" \
                 -X GET "${GDS_BASE}/artifacts/${PROBE_ARTIFACT_ID}/content" || "400")
-    [[ "${response_code}" == "200" ]]
+    [[ "${response_code}" == "302" ]]
 }
 
 #########################
