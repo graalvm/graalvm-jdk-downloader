@@ -111,7 +111,7 @@ if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
                 exit
             fi
             echo "The token stored in '${GU_CONFIG}' is not yet valid, because you have not yet accepted the license emailed to you, or no longer valid, because you have generated another token for the same email address."
-            read -r -p "Would you like to generate a new token? (Y/n): " user_input
+            read -r -p "Would you like to generate a new token? (y/N): " user_input
             if [[ "${user_input}" != [yY] ]]; then
                 exit
             fi
