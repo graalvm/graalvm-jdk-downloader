@@ -75,10 +75,7 @@ Options:
                       Revoke download tokens. If no argument is provided, the
                       scripts attempts to detect a persisted token and revoke
                       it. Provide an specific token as an argument to revoke it.
-                      Provide an email address to revoke all tokens for that
-                      email.
-
-                      
+                      Provide an email address to revoke all associated tokens.                      
 
 Visit https://github.com/graalvm/graalvm-jdk-downloader for more information.
 EOF
