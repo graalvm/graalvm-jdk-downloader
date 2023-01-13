@@ -42,29 +42,50 @@
 
 set -o errexit # fail on error
 set -o nounset # fail if a variable is undefined
+GDS_BASE="https://gds.oracle.com/api/20220101"
+LICENSE_ID="D53FA58D12817B3CE0530F15000A74CA"
+PROBE_ARTIFACT_ID="EADE25DCAF6B2655E0531618000AAB08"
+GU_CONFIG="${HOME}/.gu/config"
+GVMD_VERSION="1.0.1"
+GVMD_NAME="GraalVM Download Token Generator"
+GVMD_SCRIPT="ee-token"
+GVMD_USER_AGENT="${GVMD_NAME}/${GVMD_VERSION} (arch:$(uname -m); os:$(uname -s)"
+readonly GDS_BASE LICENSE_ID GU_CONFIG GVMD_VERSION GVMD_NAME GVMD_SCRIPT GVMD_USER_AGENT
 
-#############
-# Debugging #
-#############
-
-function is_debug() {
-    [[ -n "${GVMD_DEBUG:-}" ]]
-}
-
-is_debug && set -x
+###########
+# Helpers #
+###########
 
 function fail() {
     echo "$1"
     exit 1
 }
 
-################
-# Housekeeping #
-################
+function print_help() {
+  cat <<EOF
+${GVMD_NAME} v${GVMD_VERSION}
+
+Usage:
+  bash <(curl -sL https://get.graalvm.org/${GVMD_SCRIPT}) [opts]
+
+Options:
+  -d | --debug        Enable debug mode.
+  -h | --help         Show this help text.
+  --revoke [<token>/<email>]
+                      Revoke download tokens. If no argument is provided, the
+                      scripts attempts to detect a persisted token and revoke
+                      it. Provide an specific token as an argument to revoke it.
+                      Provide an email address to revoke all tokens for that
+                      email.
+
+                      
+
+Visit https://github.com/graalvm/graalvm-jdk-downloader for more information.
+EOF
+}
 
 function ensure_command() {
     local cmd=$1
-    is_debug && echo "Looking for ${cmd}..."
     if ! command -v "${cmd}" > /dev/null; then
         echo "${cmd} not found."
         echo ""
@@ -79,13 +100,6 @@ function ensure_command() {
 
 ensure_command "curl"
 
-GDS_BASE="https://gds.oracle.com/api/20220101"
-LICENSE_ID="D53FA58D12817B3CE0530F15000A74CA"
-PROBE_ARTIFACT_ID="EADE25DCAF6B2655E0531618000AAB08"
-GU_CONFIG="${HOME}/.gu/config"
-GVMD_USER_AGENT="GraalVM Download Token Generator/1.0.0 (arch:$(uname -m); os:$(uname -s)"
-readonly GDS_BASE LICENSE_ID GU_CONFIG GVMD_USER_AGENT
-
 function is_valid_token() {
     response_code=$(curl --silent --head --write-out '%{http_code}' \
                 -o /dev/null --user-agent "${GVMD_USER_AGENT}" \
@@ -93,6 +107,68 @@ function is_valid_token() {
                 -X GET "${GDS_BASE}/artifacts/${PROBE_ARTIFACT_ID}/content" || "400")
     [[ "${response_code}" == "302" ]]
 }
+
+function revoke() {
+    local token_or_email=$1
+    local key="downloadToken"
+    local question="Do you want to revoke the token '${token_or_email}'? (y/N): "
+
+    if [[ -z "${token_or_email}" ]]; then
+        if [[ -n "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
+            token_or_email="${GRAAL_EE_DOWNLOAD_TOKEN}"
+        else
+            # shellcheck source=/dev/null
+            source "${GU_CONFIG}"
+            if [[ -z "${GRAAL_EE_DOWNLOAD_TOKEN:-}" ]]; then
+                fail "Unable to detect \$GRAAL_EE_DOWNLOAD_TOKEN in '${GU_CONFIG}'. Please remove the file and try again."
+            fi
+            token_or_email="${GRAAL_EE_DOWNLOAD_TOKEN}"
+        fi
+        question="Found download token '${token_or_email}'.
+Do you want to revoke it? (y/N): "
+    elif [[ "${token_or_email}" == *"@"* ]]; then
+        key="email"
+        question="Do you want to revoke all download tokens for '${token_or_email}'? (y/N): "
+    fi
+
+    read -r -p "${question}" user_input
+    if [[ "${user_input}" != [yY] ]]; then
+        exit
+    fi
+
+    response=$(curl -sS -X POST "${GDS_BASE}/tokenRequests" --user-agent "${GVMD_USER_AGENT}" -H "Content-Type: application/json" \
+        -d "{ \"type\": \"REVOKE\", \"${key}\": \"${token_or_email}\" }")
+    if [[ -n "${response}" ]]; then
+        fail "Revocation request failed with response: ${response}."
+    fi
+
+    echo "Successfully requested revocation.
+Please check your email for a message asking you to confirm that you want to revoke your download token(s)."
+}
+
+#############################
+# Check and parse arguments #
+#############################
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -d | --debug)
+        set -x
+        shift
+        ;;
+    -h | --help)
+        print_help
+        exit 0
+        ;;
+    --revoke)
+        revoke "${2:-}"
+        exit 0
+        ;;
+    *)
+        fail "Unknown option: $1"
+        ;;
+    esac
+done
 
 #########################
 # Detect existing token #

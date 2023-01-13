@@ -66,6 +66,17 @@ Download tokens are associated with an email account, so treat them as confident
 $ bash <(curl -sL https://get.graalvm.org/ee-token)
 ```
 
+Use the `--revoke` option to revoke download tokens:
+
+```bash
+# Revoke a persisted token
+$ bash <(curl -sL https://get.graalvm.org/ee-token) --revoke
+# Revoke a specific token
+$ bash <(curl -sL https://get.graalvm.org/ee-token) --revoke mytoken
+# Revoke all tokens for an email address
+$ bash <(curl -sL https://get.graalvm.org/ee-token) --revoke jane@doe.com
+```
+
 ## Contribute
 
 We welcome code contributions. To get started, sign the [Oracle Contributor Agreement][oca] (OCA).
