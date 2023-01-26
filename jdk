@@ -89,8 +89,7 @@ EOF
 
     cat <<EOF
 
-Run the following to set your \$GRAALVM_HOME, \$PATH, and/or \$JAVA_HOME:
-$ export GRAALVM_HOME="${GRAALVM_HOME}"
+Run the following to adjust your \$JAVA_HOME and/or \$PATH:
 $ export PATH="${GRAALVM_HOME}/bin:\$PATH"
 $ export JAVA_HOME="${GRAALVM_HOME}"
 EOF

@@ -42,7 +42,6 @@ jobs:
         run: |
           path_suffix="" && [[ "$(uname -s)" != "Darwin" ]] || path_suffix="/Contents/Home"
           exec_suffix="" && [[ "$(uname -s)" != "MINGW64_NT-"* ]] || exec_suffix=".cmd"
-          export GRAALVM_HOME="$HOME/${{ matrix.version }}${path_suffix}"
           export PATH="$HOME/${{ matrix.version }}${path_suffix}/bin:$PATH"
           export JAVA_HOME="$HOME/${{ matrix.version }}${path_suffix}"
           java -version
