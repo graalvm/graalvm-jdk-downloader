@@ -1,3 +1,8 @@
+> **Warning**
+> The GraalVM JDK Downloader is no longer maintained.
+> Please consider using [script-friendly URLs][script-friendly] or [SDKMAN!][sdkman] to download GraalVM.
+> For all download options, visit: https://graalvm.org/downloads.
+
 # GraalVM JDK Downloader
 
 [![Tests](https://github.com/graalvm/graalvm-jdk-downloader/actions/workflows/main.yml/badge.svg)](https://github.com/graalvm/graalvm-jdk-downloader/actions/workflows/main.yml)
@@ -94,4 +99,6 @@ We only accept pull requests from committers that can be verified as having sign
 [git-bash]: https://git-scm.com/download/win
 [graalvm]: https://graalvm.org
 [oca]: https://oca.opensource.oracle.com
+[script-friendly]: https://www.oracle.com/java/technologies/jdk-script-friendly-urls/
+[sdkman]: https://sdkman.io/
 [wsl]: https://docs.microsoft.com/en-us/windows/wsl/install

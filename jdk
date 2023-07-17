@@ -145,6 +145,23 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+######################
+# Deprecation notice #
+######################
+
+cat <<EOF
+
+!! The GraalVM JDK Downloader is no longer maintained.
+!! Please consider using script-friendly URLs or SDKMAN! to download GraalVM.
+!! For all download options, visit: https://graalvm.org/downloads.
+
+EOF
+
+
+##############################
+# Determine common variables #
+##############################
+
 if [[ "${#opt_positional[@]}" -eq 0 ]]; then
     opt_graalvm_identifier="${DEFAULT_EE_IDENTIFIER}"
 elif [[ "${#opt_positional[@]}" -ne 1 || "${opt_positional[0]}" != "graalvm-"* ]]; then
