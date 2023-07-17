@@ -42,11 +42,10 @@
 
 set -o errexit # fail on error
 set -o nounset # fail if a variable is undefined
-readonly GVMD_VERSION="1.0.0"
+readonly GVMD_VERSION="1.1.0"
 readonly GVMD_NAME="GraalVM JDK Downloader"
 readonly GVMD_SCRIPT="jdk"
-readonly DEFAULT_CE_IDENTIFIER="graalvm-ce-java17-22.3.1"
-readonly DEFAULT_EE_IDENTIFIER="graalvm-ee-java17-22.3.1"
+readonly DEFAULT_EE_IDENTIFIER="graalvm-jdk-17.0.7"
 readonly GU_CONFIG="${HOME}/.gu/config"
 
 ###########
@@ -63,7 +62,7 @@ function print_help() {
 ${GVMD_NAME} v${GVMD_VERSION}
 
 Usage:
-  bash <(curl -sL https://get.graalvm.org/${GVMD_SCRIPT}) [opts] [${DEFAULT_CE_IDENTIFIER}]
+  bash <(curl -sL https://get.graalvm.org/${GVMD_SCRIPT}) [opts] [${DEFAULT_EE_IDENTIFIER}]
 
 Options:
   -c | --components   Comma-separated list of GraalVM components (for example,
@@ -147,88 +146,122 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "${#opt_positional[@]}" -eq 0 ]]; then
-    if [[ -n "${GRAAL_EE_DOWNLOAD_TOKEN:-}" || -f "${GU_CONFIG}" ]]; then
-        opt_graalvm_identifier="${DEFAULT_EE_IDENTIFIER}"
-    else
-        opt_graalvm_identifier="${DEFAULT_CE_IDENTIFIER}"
-    fi
+    opt_graalvm_identifier="${DEFAULT_EE_IDENTIFIER}"
 elif [[ "${#opt_positional[@]}" -ne 1 || "${opt_positional[0]}" != "graalvm-"* ]]; then
-    fail "A GraalVM identifier (for example, 'graalvm-ce-java11-22.1.0') must be the only position argument, got ${#opt_positional[@]}: '${opt_positional[*]:-}'."
+    fail "A GraalVM identifier (for example, 'graalvm-jdk-20.0.1') must be the only position argument, got ${#opt_positional[@]}: '${opt_positional[*]:-}'."
 else
     opt_graalvm_identifier="${opt_positional[0]}"
 fi
-
-parts="${opt_graalvm_identifier#*-}"
-readonly GRAALVM_EDITION="${parts%%-*}"
-case "${GRAALVM_EDITION}" in
-    "ce"|"ee") ;;
-    *)
-        fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')."
-esac
-
-parts="${parts#*-}"
-readonly JAVA_VERSION="${parts%%-*}"
-case "${JAVA_VERSION}" in
-    "java11"|"java17"|"java19") ;;
-    "${GRAALVM_EDITION}")
-        fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a Java version (for example, '-java17')."
-        ;;
-    *)
-        fail "Unsupported Java version: ${JAVA_VERSION} (use 'java11', 'java17', or 'java19')."
-esac
 
 GRAALVM_HOME_SUFFIX=""
 GRAALVM_GU_EXEC="gu"
 GRAALVM_FILENAME_EXT="tar.gz"
 case "$(uname -s)" in
     "Linux")
-        GRAALVM_OS="linux";;
+        GRAALVM_JDK_OS="linux"
+        GRAALVM_OS="linux"
+        ;;
     "Darwin")
         GRAALVM_HOME_SUFFIX="/Contents/Home"
-        GRAALVM_OS="darwin";;
+        GRAALVM_JDK_OS="macos"
+        GRAALVM_OS="darwin"
+        ;;
     "CYGWIN_NT-"*)
         GRAALVM_GU_EXEC="gu.cmd"
         GRAALVM_FILENAME_EXT="zip"
-        GRAALVM_OS="windows";;
+        GRAALVM_JDK_OS="windows"
+        GRAALVM_OS="windows"
+        ;;
     "MINGW64_NT-"*)
         GRAALVM_GU_EXEC="gu.cmd"
         GRAALVM_FILENAME_EXT="zip"
-        GRAALVM_OS="windows";;
+        GRAALVM_JDK_OS="windows"
+        GRAALVM_OS="windows"
+        ;;
     *)
         fail "Unsupported OS: $(uname -s)"
 esac
-readonly GRAALVM_OS GRAALVM_HOME_SUFFIX GRAALVM_GU_EXEC GRAALVM_FILENAME_EXT
+readonly GRAALVM_JDK_OS GRAALVM_OS GRAALVM_HOME_SUFFIX GRAALVM_GU_EXEC GRAALVM_FILENAME_EXT
 
 case "$(uname -m)" in
     "x86_64")
+        GRAALVM_JDK_ARCH="x64"
         GRAALVM_ARCH="amd64"
         ;;
     "aarch64"|"arm64")
+        GRAALVM_JDK_ARCH="aarch64"
         GRAALVM_ARCH="aarch64"
         ;;
     *)
         fail "Unsupported architecture: $(uname -m)"
 esac
-readonly GRAALVM_ARCH
+readonly GRAALVM_JDK_ARCH GRAALVM_ARCH
+
+############################
+# Parse GraalVM identifier #
+############################
+
+parts="${opt_graalvm_identifier#*-}"
+GRAALVM_EDITION="${parts%%-*}"
+case "${GRAALVM_EDITION}" in
+    "ce"|"ee") ;;
+    "community")
+        GRAALVM_EDITION="graalvm-community"
+        GRAALVM_RT="openjdk"
+        parts="${parts#*-}"
+        if [[ "${parts%%-*}" != "jdk" ]]; then
+            fail "GraalVM identifier '${opt_graalvm_identifier}' must start with 'graalvm-community-jdk' for GraalVM Community for JDK 17 and later."
+        fi
+        ;;
+    "jdk")
+        GRAALVM_EDITION="graalvm"
+        GRAALVM_RT="jdk"
+        ;;
+    *)
+        fail "Unsupported GraalVM Edition: ${GRAALVM_EDITION} (use 'ce' or 'ee')."
+esac
+readonly GRAALVM_EDITION
 
 parts="${parts#*-}"
-readonly GRAALVM_VERSION="${parts%%-*}"
 
-if [[ "${GRAALVM_VERSION}" == "${JAVA_VERSION}" ]]; then
-    fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a GraalVM version (for example, '-22.1.0')."
-elif [[ ! "${GRAALVM_VERSION}" =~ ^[0-9\.]*$ ]]; then
-    fail "Invalid GraalVM version: ${GRAALVM_VERSION}"
+if [[ "${GRAALVM_EDITION}" == "graalvm" || "${GRAALVM_EDITION}" == "graalvm-community" ]]; then
+    readonly JAVA_VERSION="${parts%%-*}"
+    GRAALVM_IDENTIFIER="${GRAALVM_EDITION}-jdk-${JAVA_VERSION}_${GRAALVM_JDK_OS}-${GRAALVM_JDK_ARCH}_bin"
+    GRAALVM_NAME="${GRAALVM_EDITION}-${GRAALVM_RT}-${JAVA_VERSION}"
+    GRAALVM_FILENAME="${GRAALVM_IDENTIFIER}.${GRAALVM_FILENAME_EXT}"
+    readonly GRAALVM_IDENTIFIER GRAALVM_NAME GRAALVM_FILENAME
+else
+    readonly JAVA_VERSION="${parts%%-*}"
+    case "${JAVA_VERSION}" in
+        "java11"|"java17"|"java19") ;;
+        "${GRAALVM_EDITION}")
+            fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a Java version (for example, '-java17')."
+            ;;
+        *)
+            fail "Unsupported Java version: ${JAVA_VERSION} (use 'java11', 'java17', or 'java19')."
+    esac
+
+    parts="${parts#*-}"
+    readonly GRAALVM_VERSION="${parts%%-*}"
+
+    if [[ "${GRAALVM_VERSION}" == "${JAVA_VERSION}" ]]; then
+        fail "GraalVM identifier '${opt_graalvm_identifier}' is missing a GraalVM version (for example, '-22.1.0')."
+    elif [[ ! "${GRAALVM_VERSION}" =~ ^[0-9\.]*$ ]]; then
+        fail "Invalid GraalVM version: ${GRAALVM_VERSION}"
+    fi
+
+    GRAALVM_IDENTIFIER="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_OS}-${GRAALVM_ARCH}-${GRAALVM_VERSION}"
+    GRAALVM_NAME="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_VERSION}"
+    GRAALVM_FILENAME="${GRAALVM_IDENTIFIER}.${GRAALVM_FILENAME_EXT}"
+    readonly GRAALVM_IDENTIFIER GRAALVM_NAME GRAALVM_FILENAME
 fi
-
-GRAALVM_IDENTIFIER="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_OS}-${GRAALVM_ARCH}-${GRAALVM_VERSION}"
-GRAALVM_NAME="graalvm-${GRAALVM_EDITION}-${JAVA_VERSION}-${GRAALVM_VERSION}"
-GRAALVM_FILENAME="${GRAALVM_IDENTIFIER}.${GRAALVM_FILENAME_EXT}"
-TEMP_DL_FILE="$(mktemp)"
-readonly GRAALVM_IDENTIFIER GRAALVM_NAME GRAALVM_FILENAME TEMP_DL_FILE
 
 ################
 # Housekeeping #
 ################
+
+TEMP_DL_FILE="$(mktemp)"
+readonly TEMP_DL_FILE
 
 function ensure_command() {
     local cmd=$1
@@ -264,7 +297,12 @@ fi
 ####################
 
 readonly GVMD_DIR="${opt_target_path}" # opt_target_path can only be an existing path
-readonly GRAALVM_HOME="${GVMD_DIR}/${GRAALVM_NAME}${GRAALVM_HOME_SUFFIX}"
+GRAALVM_HOME="${GVMD_DIR}/${GRAALVM_NAME}${GRAALVM_HOME_SUFFIX}"
+GRAALVM_HOME_ALT="$(find "${GVMD_DIR}" -type d -name "${GRAALVM_NAME}\+*")${GRAALVM_HOME_SUFFIX}"
+
+if [[ -d "${GRAALVM_HOME_ALT}" ]]; then
+    GRAALVM_HOME="${GRAALVM_HOME_ALT}"
+fi
 
 if [[ -d "${GRAALVM_HOME}" ]]; then
     printf "\nGraalVM JDK (%s) already exists in the target destination!\n" "${GRAALVM_NAME}"
@@ -279,11 +317,37 @@ pushd "${GVMD_DIR}" > /dev/null
 ############
 
 case "${GRAALVM_EDITION}" in
+    "graalvm")
+        readonly GRAALVM_BASE="https://download.oracle.com/graalvm"
+
+        echo "Downloading ${GRAALVM_FILENAME}..."
+        dl_url="${GRAALVM_BASE}/${JAVA_VERSION%%.*}/archive/${GRAALVM_FILENAME}"
+        curl "${curl_args[@]}" -o "${TEMP_DL_FILE}" "${dl_url}" || fail "Failed to download '${dl_url}'."
+
+        checksum_file="$(mktemp)"
+        curl "${curl_args[@]}" --silent -o "${checksum_file}" "${dl_url}.sha256" || fail "Failed to download '${dl_url}.sha256'. ${REPORT_ISSUES_NOTE}"
+        GRAALVM_FILENAME_CHECKSUM="$(cat "${checksum_file}")"
+        readonly GRAALVM_FILENAME_CHECKSUM
+        rm "${checksum_file}"
+        ;;
+    "graalvm-community")
+        readonly GRAALVM_CE_BASE="https://github.com/graalvm/graalvm-ce-builds/releases/download"
+
+        echo "Downloading ${GRAALVM_FILENAME}..."
+        dl_url="${GRAALVM_CE_BASE}/jdk-${JAVA_VERSION}/${GRAALVM_FILENAME}"
+        curl "${curl_args[@]}" -o "${TEMP_DL_FILE}" "${dl_url}" || fail "Failed to download '${dl_url}'."
+
+        checksum_file="$(mktemp)"
+        curl "${curl_args[@]}" --silent -o "${checksum_file}" "${dl_url}.sha256" || fail "Failed to download '${dl_url}.sha256'. ${REPORT_ISSUES_NOTE}"
+        GRAALVM_FILENAME_CHECKSUM="$(cat "${checksum_file}")"
+        readonly GRAALVM_FILENAME_CHECKSUM
+        rm "${checksum_file}"
+        ;;
     "ce")
         readonly GRAALVM_CE_BASE="https://github.com/graalvm/graalvm-ce-builds/releases/download"
 
         echo "Downloading ${GRAALVM_FILENAME}..."
-        dl_url="${GRAALVM_CE_BASE}/vm-${GRAALVM_VERSION}/${GRAALVM_IDENTIFIER}.${GRAALVM_FILENAME_EXT}"
+        dl_url="${GRAALVM_CE_BASE}/vm-${GRAALVM_VERSION}/${GRAALVM_FILENAME}"
         curl "${curl_args[@]}" -o "${TEMP_DL_FILE}" "${dl_url}" || fail "Failed to download '${dl_url}'."
 
         checksum_file="$(mktemp)"
@@ -370,8 +434,14 @@ fi
 rm "${TEMP_DL_FILE}"
 
 if [[ ! -d "${GRAALVM_HOME}" ]]; then
-    fail "Failed to find GraalVM installation. ${REPORT_ISSUES_NOTE}"
+    # Try to find installation directory
+    GRAALVM_HOME="$(find "${GVMD_DIR}" -type d -name "${GRAALVM_NAME}\+*")${GRAALVM_HOME_SUFFIX}"
+    if [[ ! -d "${GRAALVM_HOME}" ]]; then
+        fail "Failed to find GraalVM installation. ${REPORT_ISSUES_NOTE}"
+    fi
 fi
+
+readonly GRAALVM_HOME
 
 popd > /dev/null
 
@@ -380,10 +450,12 @@ popd > /dev/null
 ##############################
 
 if [[ "${#opt_components[@]}" -gt 0 ]]; then
-    echo "Installing GraalVM components..."
-    "${GRAALVM_HOME}/bin/${GRAALVM_GU_EXEC}" install "${gu_args[@]}" "${opt_components[@]}"
+    if [[ ! " ${opt_components[*]} " =~ " native-image " || "${GRAALVM_EDITION}" != "graalvm" || "${GRAALVM_EDITION}" != "graalvm-community" ]]; then
+        echo "Installing GraalVM components..."
+        "${GRAALVM_HOME}/bin/${GRAALVM_GU_EXEC}" install "${gu_args[@]}" "${opt_components[@]}"
+    fi
 
-    if [[ ${opt_components[*]} == *"native-image"*  ]]; then
+    if [[ ${opt_components[*]} == *"native-image"* ]]; then
         cat <<EOF
 
 +------------------------------------------------------------------------------+
