@@ -45,7 +45,7 @@ set -o nounset # fail if a variable is undefined
 readonly GVMD_VERSION="1.1.0"
 readonly GVMD_NAME="GraalVM JDK Downloader"
 readonly GVMD_SCRIPT="jdk"
-readonly DEFAULT_EE_IDENTIFIER="graalvm-jdk-17.0.7"
+readonly DEFAULT_EE_IDENTIFIER="graalvm-jdk-17.0.8"
 readonly GU_CONFIG="${HOME}/.gu/config"
 
 ###########
@@ -165,7 +165,7 @@ EOF
 if [[ "${#opt_positional[@]}" -eq 0 ]]; then
     opt_graalvm_identifier="${DEFAULT_EE_IDENTIFIER}"
 elif [[ "${#opt_positional[@]}" -ne 1 || "${opt_positional[0]}" != "graalvm-"* ]]; then
-    fail "A GraalVM identifier (for example, 'graalvm-jdk-20.0.1') must be the only position argument, got ${#opt_positional[@]}: '${opt_positional[*]:-}'."
+    fail "A GraalVM identifier (for example, 'graalvm-jdk-20.0.2') must be the only position argument, got ${#opt_positional[@]}: '${opt_positional[*]:-}'."
 else
     opt_graalvm_identifier="${opt_positional[0]}"
 fi

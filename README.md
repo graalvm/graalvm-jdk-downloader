@@ -28,16 +28,16 @@ The GraalVM JDK Downloader
 $ bash <(curl -sL https://get.graalvm.org/jdk)
 
 # Download a specific GraalVM JDK
-$ bash <(curl -sL https://get.graalvm.org/jdk) graalvm-jdk-20.0.1           # Oracle GraalVM for JDK 20
+$ bash <(curl -sL https://get.graalvm.org/jdk) graalvm-jdk-20.0.2           # Oracle GraalVM for JDK 20
 $ bash <(curl -sL https://get.graalvm.org/jdk) graalvm-community-jdk-17.0.7 # GraalVM Community Edition for JDK 17
 $ bash <(curl -sL https://get.graalvm.org/jdk) graalvm-ce-java17-22.3.1     # GraalVM Community Edition 22.3.X and earlier
 $ bash <(curl -sL https://get.graalvm.org/jdk) graalvm-ee-java17-22.3.1     # GraalVM Enterprise Edition 22.3.X and earlier
 
 # Download a specific GraalVM JDK to a specific directory
-$ bash <(curl -sL https://get.graalvm.org/jdk) --to "$HOME" graalvm-jdk-20.0.1
+$ bash <(curl -sL https://get.graalvm.org/jdk) --to "$HOME" graalvm-jdk-20.0.2
 
 # Download a specific GraalVM JDK and install the Python and Node.js runtimes
-$ bash <(curl -sL https://get.graalvm.org/jdk) -c python,nodejs graalvm-jdk-20.0.1
+$ bash <(curl -sL https://get.graalvm.org/jdk) -c python,nodejs graalvm-jdk-20.0.2
 ```
 
 ## Help
@@ -47,7 +47,7 @@ $ bash <(curl -sL https://get.graalvm.org/jdk) --help
 GraalVM JDK Downloader v1.1.0
 
 Usage:
-  bash <(curl -sL https://get.graalvm.org/jdk) [opts] [graalvm-community-jdk-20.0.1]
+  bash <(curl -sL https://get.graalvm.org/jdk) [opts] [graalvm-community-jdk-20.0.2]
 
 Options:
   -c | --components   Comma-separated list of GraalVM components (for example,
