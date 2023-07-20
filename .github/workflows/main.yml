@@ -22,7 +22,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        version: [graalvm-jdk-20.0.1, graalvm-jdk-17.0.7, graalvm-community-jdk-20.0.1, graalvm-community-jdk-17.0.7, graalvm-ce-java11-22.3.1, graalvm-ee-java17-22.3.1, graalvm-ee-java19-22.3.1]
+        version: [graalvm-jdk-20.0.2, graalvm-jdk-17.0.8, graalvm-community-jdk-20.0.1, graalvm-community-jdk-17.0.7, graalvm-ce-java11-22.3.1, graalvm-ee-java17-22.3.1, graalvm-ee-java19-22.3.1]
         os: [ubuntu-latest, macos-latest, windows-latest]
         script: [jdk]
     steps:
